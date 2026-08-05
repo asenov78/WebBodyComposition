@@ -5,6 +5,11 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../../../lib/prisma';
 
 export const authOptions = {
+    // next-auth v4 looks for NEXTAUTH_SECRET by default; we provision AUTH_SECRET
+    // (the Auth.js/v5 name) via the Vercel bootstrap flow, so wire it explicitly
+    // here and in middleware.js — otherwise each serverless instance falls back to
+    // a different auto-generated secret and JWTs from login can't be verified later.
+    secret: process.env.AUTH_SECRET,
     adapter: PrismaAdapter(prisma),
     session: {
         strategy: 'jwt',
