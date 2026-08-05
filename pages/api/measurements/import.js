@@ -24,6 +24,7 @@ export default async function handler(req, res) {
     }
 
     let imported = 0;
+    let duplicates = 0;
     let skipped = 0;
 
     for (const record of records) {
@@ -35,9 +36,22 @@ export default async function handler(req, res) {
             continue;
         }
 
-        await prisma.measurement.upsert({
+        // Check first instead of blind upsert() so we can tell the caller "this one
+        // was already there" vs "this is new" — upsert's create/update branches both
+        // "succeed" from the caller's point of view, which was making the response
+        // claim things were imported when they'd actually been seen before.
+        const existing = await prisma.measurement.findUnique({
             where: { userId_sourceDate: { userId, sourceDate } },
-            create: {
+            select: { id: true },
+        });
+
+        if (existing) {
+            duplicates += 1;
+            continue;
+        }
+
+        await prisma.measurement.create({
+            data: {
                 userId,
                 sourceDate,
                 weight,
@@ -50,13 +64,11 @@ export default async function handler(req, res) {
                 metabolicAge: numOrNull(record.metabolicAge),
                 bodyType: numOrNull(record.bodyScore),
             },
-            // Already-imported rows are left as-is (don't clobber syncedToGarmin/syncError).
-            update: {},
         });
         imported += 1;
     }
 
-    return res.status(200).json({ imported, skipped, total: records.length });
+    return res.status(200).json({ imported, duplicates, skipped, total: records.length });
 }
 
 function numOrNull(value) {

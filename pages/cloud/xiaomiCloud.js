@@ -207,7 +207,7 @@ export default function XiaomiCloud() {
                 });
                 const importData = await importRes.json();
                 setMessage(importRes.ok
-                    ? `Loaded ${allRecords.length} record${allRecords.length === 1 ? '' : 's'}, saved ${importData.imported} new.`
+                    ? `Loaded ${allRecords.length} record${allRecords.length === 1 ? '' : 's'}: ${importData.imported} new, ${importData.duplicates} already saved.`
                     : `Loaded ${allRecords.length} record${allRecords.length === 1 ? '' : 's'}, but saving them failed.`);
             } else {
                 setMessage(responseText || 'Measurements request sent successfully.');
