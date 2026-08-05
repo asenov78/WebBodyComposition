@@ -253,12 +253,14 @@ export default function XiaomiCloud() {
             const pollResponse = await pollForPassToken(`${serverUrl}${loginResponse.pollingEndpoint}`, controller.signal);
 
             if (pollResponse?.status === 'completed') {
-                // The proxy returns the real account id under `cUserId`, not `userId`
-                // (confirmed from a live poll response: {"userId":null,"cUserId":"..."}).
-                // Keep the other variants as a defensive fallback in case the proxy changes.
-                const resolvedUserId = pollResponse.cUserId ?? pollResponse.userId ?? pollResponse.UserId
+                // pollResponse.userId is the numeric Xiaomi account id the weights
+                // endpoint expects (confirmed live: {"userId":238807326,...}).
+                // pollResponse.cUserId is a *different* string identifier the proxy
+                // also returns — it is NOT a substitute, so it's intentionally not
+                // used here (an earlier version of this fix wrongly preferred it).
+                const resolvedUserId = pollResponse.userId ?? pollResponse.UserId
                     ?? pollResponse.userID ?? pollResponse.uid ?? pollResponse.miAccountId
-                    ?? pollResponse.accountId ?? pollResponse.id;
+                    ?? pollResponse.accountId;
                 const resolvedPassToken = pollResponse.passToken ?? pollResponse.PassToken;
 
                 if (resolvedUserId !== undefined && resolvedUserId !== null && resolvedUserId !== '') {
