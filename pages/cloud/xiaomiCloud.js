@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import useLocalStorageState from 'use-local-storage-state';
 
@@ -50,9 +50,51 @@ export default function XiaomiCloud() {
     const [qrCodeBase64, setQrCodeBase64] = useState('');
     const [pollingEndpoint, setPollingEndpoint] = useState('');
     const [weightRecords, setWeightRecords] = useState([]);
+    const [isLoadingConnection, setIsLoadingConnection] = useState(true);
+    const [isSavedServerSide, setIsSavedServerSide] = useState(false);
     const loginPollingControllerRef = useRef(null);
 
     const isGetMeasurementsEnabled = userId.trim() !== '' && passToken.trim() !== '';
+
+    // Load the server-saved connection once on mount so logging in from a different
+    // browser/device (or after clearing localStorage) doesn't lose it — previously this
+    // only ever lived in this one browser's localStorage.
+    useEffect(() => {
+        fetch('/api/xiaomi/credentials')
+            .then((r) => r.json())
+            .then((data) => {
+                if (data.connected) {
+                    setUserId(String(data.xiaomiUserId));
+                    setPassToken(data.passToken);
+                    if (data.region) setRegion(data.region);
+                    if (data.model) setModel(data.model);
+                    setIsSavedServerSide(true);
+                }
+            })
+            .catch(() => { })
+            .finally(() => setIsLoadingConnection(false));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const saveCredentialsToServer = async (xiaomiUserId, token, currentRegion, currentModel) => {
+        try {
+            const res = await fetch('/api/xiaomi/credentials', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ xiaomiUserId, passToken: token, region: currentRegion, model: currentModel }),
+            });
+            setIsSavedServerSide(res.ok);
+        } catch {
+            setIsSavedServerSide(false);
+        }
+    };
+
+    const disconnectXiaomi = async () => {
+        await fetch('/api/xiaomi/credentials', { method: 'DELETE' });
+        setUserId('');
+        setPassToken('');
+        setIsSavedServerSide(false);
+    };
 
     const sleep = (delayMs, signal) => new Promise((resolve, reject) => {
         if (signal?.aborted) {
@@ -277,6 +319,12 @@ export default function XiaomiCloud() {
                     setPassToken(String(resolvedPassToken));
                 }
 
+                if (resolvedUserId && resolvedPassToken) {
+                    // Persist to the account, not just this browser, so it's there
+                    // next time regardless of device/incognito/logout.
+                    await saveCredentialsToServer(String(resolvedUserId), String(resolvedPassToken), region, model);
+                }
+
                 if (resolvedUserId === undefined || resolvedUserId === null || resolvedUserId === '') {
                     setMessage(`Pass token retrieved, but no User ID field was found in the response. Raw keys: ${Object.keys(pollResponse).join(', ')}`);
                 } else {
@@ -350,6 +398,19 @@ export default function XiaomiCloud() {
                 <div className='w-full max-w-7xl px-4 ml-auto mr-auto'>
 
                     <h1 className='text-2xl font-bold text-center mb-5'>Mi Cloud Connector</h1>
+
+                    {isLoadingConnection && (
+                        <p className='text-center text-gray-500 mt-4'>Checking saved connection…</p>
+                    )}
+
+                    {!isLoadingConnection && isSavedServerSide && !isPollingPassToken && (
+                        <div className='text-center mt-4 mb-6'>
+                            <p>✅ Connected to Xiaomi Cloud (User ID {userId})</p>
+                            <a href='#' className='underline text-sm' onClick={(e) => { e.preventDefault(); disconnectXiaomi(); }}>
+                                Disconnect / use a different account
+                            </a>
+                        </div>
+                    )}
 
                     {!isPollingPassToken ? (
                         <form id='xiaomi-cloud-form' onSubmit={submitMeasurements} className='space-y-4 mt-10'>

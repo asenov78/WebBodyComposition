@@ -16,7 +16,25 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   garminCredential GarminCredential?
+  xiaomiCredential XiaomiCredential?
   measurements     Measurement[]
+}
+
+// Xiaomi Cloud login (userId + passToken from the QR-code SSO flow), encrypted at rest.
+// Saved once so the connection survives logout/incognito/other devices instead of
+// living only in that one browser's localStorage.
+model XiaomiCredential {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  xiaomiUserIdEnc String
+  passTokenEnc    String
+  region          String  @default("de")
+  model           String  @default("yunmai.scales.ms104")
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 // Garmin login + reusable OAuth1 token, encrypted at rest (AES-256-GCM).

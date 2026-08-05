@@ -11,6 +11,20 @@ export default withAuth({
     pages: {
         signIn: '/login',
     },
+    callbacks: {
+        // Temporary diagnostics for the "takes several tries to log in" report —
+        // logs whether middleware sees a valid token on each protected request.
+        // Pull with `vercel logs`. Remove once the cause is confirmed.
+        authorized: ({ req, token }) => {
+            console.log(JSON.stringify({
+                scope: 'middleware.authorized',
+                path: req.nextUrl.pathname,
+                hasToken: Boolean(token),
+                userId: token?.userId ?? null,
+            }));
+            return Boolean(token);
+        },
+    },
 });
 
 export const config = {
