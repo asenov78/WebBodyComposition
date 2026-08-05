@@ -35,22 +35,11 @@ export default function Navbar() {
                 </div>
                 <div className={`w-full  flex-grow lg:flex lg:items-center lg:w-auto ${isMenuOpen ? 'block' : 'hidden'}`}>
                     <div className="text-sm lg:flex-grow">
-                        <Link href="/scale/xiaomi" passHref
+                        <Link href="/cloud/xiaomiCloud" passHref
                             onClick={() => { toggleMenu() }}
                             className='block mt-4 lg:inline-block lg:mt-0 text-blue-100 hover:text-white mr-4'>
-                            Mi Scale Scanner
+                            Mi Cloud Connector (S400)
                         </Link>
-                        <Link href="/sync/garmin" passHref
-                            onClick={() => { toggleMenu() }}
-                            className='block mt-4 lg:inline-block lg:mt-0 text-blue-100 hover:text-white mr-4'>
-                            Garmin Connect form
-                        </Link>
-                        <Link href="/faq" passHref
-                            onClick={() => { toggleMenu() }}
-                            className='block mt-4 lg:inline-block lg:mt-0 text-blue-100 hover:text-white mr-4'>
-                            FAQ
-                        </Link>
-
                     </div>
                     <div className="flex items-center gap-3">
                         {status === 'authenticated' && (
@@ -74,7 +63,6 @@ export default function Navbar() {
                                 </Link>
                             </>
                         )}
-                        <a href="https://play.google.com/store/apps/details?id=com.lukaszswiderski.MiScaleExporter" target="_blank" className="inline-block text-sm px-4 py-2 leading-none border rounded text-white border-white hover:border-transparent hover:text-blue-500 hover:bg-white mt-4 lg:mt-0">Android Application</a>
                     </div>
                 </div>
 
