@@ -12,8 +12,17 @@ export default function Home() {
   useEffect(() => {
     // Xiaomi Cloud session lives in localStorage (set by pages/cloud/xiaomiCloud.js) —
     // there's no server record of it, so this is just a client-side presence check.
-    const userId = window.localStorage.getItem('xiaomiCloud.userId');
-    const passToken = window.localStorage.getItem('xiaomiCloud.passToken');
+    // use-local-storage-state JSON-stringifies values (so an empty string is stored
+    // as the 2-char string `""`, which is truthy) — must JSON.parse before checking.
+    const readStoredValue = (key) => {
+      try {
+        return JSON.parse(window.localStorage.getItem(key) ?? 'null');
+      } catch {
+        return null;
+      }
+    };
+    const userId = readStoredValue('xiaomiCloud.userId');
+    const passToken = readStoredValue('xiaomiCloud.passToken');
     setXiaomiConnected(Boolean(userId && passToken));
   }, []);
 
