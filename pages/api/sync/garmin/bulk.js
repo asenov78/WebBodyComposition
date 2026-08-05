@@ -3,13 +3,13 @@ import { authOptions } from '../../auth/[...nextauth]';
 import { prisma } from '../../../../lib/prisma';
 import { pushMeasurementToGarmin } from '../../../../lib/garminSync';
 
-// Vercel serverless functions have a hard execution time limit (10s on Hobby by
-// default). Each Garmin proxy call can take a second or more, so looping through
-// dozens/hundreds of measurements in one request either times out mid-batch (the
-// client sees a bare network failure, no useful error) or — worse — silently drops
-// the tail of the batch. We process at most `limit` per call and tell the client how
-// many are still pending so it can call again ("Sync next batch") instead.
-const MAX_TIME_BUDGET_MS = 8000;
+// This route has vercel.json maxDuration=30 (see there). We process at most `limit`
+// per call, but as a second safety net also stop early if we're eating into that
+// window — 25s leaves a 5s margin under the hard 30s cutoff. (Was 8s, way more
+// conservative than the actual configured limit — with the axios timeout(6s) + 400ms
+// pacing added after the hang-after-~17-syncs bug, only ~4 items fit per click at 8s;
+// 25s comfortably fits a real batch instead of needing dozens of manual clicks.)
+const MAX_TIME_BUDGET_MS = 25000;
 
 // Pushes up to `limit` not-yet-synced Measurement rows for this user to Garmin, one at
 // a time (the proxy is a single-account login per request, so this can't be parallelized).
