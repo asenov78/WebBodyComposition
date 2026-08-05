@@ -253,15 +253,26 @@ export default function XiaomiCloud() {
             const pollResponse = await pollForPassToken(`${serverUrl}${loginResponse.pollingEndpoint}`, controller.signal);
 
             if (pollResponse?.status === 'completed') {
-                if (pollResponse.userId !== undefined && pollResponse.userId !== null) {
-                    setUserId(String(pollResponse.userId));
+                // The proxy's field naming isn't fully documented/stable, so try every
+                // reasonable variant instead of hard-coding one key.
+                console.log('Xiaomi login poll response (completed):', pollResponse);
+                const resolvedUserId = pollResponse.userId ?? pollResponse.UserId ?? pollResponse.userID
+                    ?? pollResponse.uid ?? pollResponse.miAccountId ?? pollResponse.accountId ?? pollResponse.id;
+                const resolvedPassToken = pollResponse.passToken ?? pollResponse.PassToken;
+
+                if (resolvedUserId !== undefined && resolvedUserId !== null && resolvedUserId !== '') {
+                    setUserId(String(resolvedUserId));
                 }
 
-                if (pollResponse.passToken !== undefined && pollResponse.passToken !== null) {
-                    setPassToken(String(pollResponse.passToken));
+                if (resolvedPassToken !== undefined && resolvedPassToken !== null) {
+                    setPassToken(String(resolvedPassToken));
                 }
 
-                setMessage('Pass token retrieved successfully.');
+                if (resolvedUserId === undefined || resolvedUserId === null || resolvedUserId === '') {
+                    setMessage(`Pass token retrieved, but no User ID field was found in the response. Raw keys: ${Object.keys(pollResponse).join(', ')}`);
+                } else {
+                    setMessage('Pass token retrieved successfully.');
+                }
             } else {
                 setMessage(`Login finished with status: ${pollResponse?.status ?? 'unknown'}`);
             }
