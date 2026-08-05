@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { useRouter } from 'next/router';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 
 export default function LoginPage() {
-    const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -28,7 +26,10 @@ export default function LoginPage() {
             return;
         }
 
-        router.push('/');
+        // Full page load, not router.push: guarantees the browser sends the
+        // just-set session cookie on a fresh top-level request instead of racing
+        // a client-side navigation against it (see [...nextauth].js for context).
+        window.location.href = result?.url || '/';
     };
 
     return (

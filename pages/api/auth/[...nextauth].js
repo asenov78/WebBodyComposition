@@ -1,6 +1,5 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../../../lib/prisma';
 
@@ -10,7 +9,12 @@ export const authOptions = {
     // here and in middleware.js — otherwise each serverless instance falls back to
     // a different auto-generated secret and JWTs from login can't be verified later.
     secret: process.env.AUTH_SECRET,
-    adapter: PrismaAdapter(prisma),
+    // No adapter on purpose: we do our own prisma.user lookups in authorize() below
+    // and there are no OAuth providers needing account linking. Mixing an adapter
+    // with pure-Credentials + JWT sessions is a known NextAuth footgun that caused
+    // the session cookie to intermittently not be recognized right after login
+    // (confirmed via logs: authorize() succeeded every time, but middleware kept
+    // seeing hasToken:false for several requests afterward).
     session: {
         strategy: 'jwt',
     },

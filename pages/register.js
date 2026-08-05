@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { useRouter } from 'next/router';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 
 export default function Register() {
-    const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -42,11 +40,12 @@ export default function Register() {
 
             if (signInResult?.error) {
                 setError('Registered, but automatic sign-in failed. Please log in manually.');
-                router.push('/login');
+                window.location.href = '/login';
                 return;
             }
 
-            router.push('/');
+            // Full page load, not router.push — see pages/login.js for why.
+            window.location.href = signInResult?.url || '/';
         } catch (err) {
             console.log(err);
             setError('Something went wrong. Please try again.');
