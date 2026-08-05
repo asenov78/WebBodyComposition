@@ -29,50 +29,22 @@ export const authOptions = {
                 password: { label: 'Password', type: 'password' },
             },
             async authorize(credentials) {
-                // Temporary diagnostics for the "takes several tries to log in" report —
-                // pull these with `vercel logs`. Remove once the cause is confirmed.
-                const attemptId = Math.random().toString(36).slice(2, 8);
-                const startedAt = Date.now();
-                const log = (event, extra = {}) => console.log(JSON.stringify({
-                    scope: 'auth.authorize', attemptId, event, ms: Date.now() - startedAt, ...extra,
-                }));
-
-                log('start', { email: credentials?.email });
-
                 if (!credentials?.email || !credentials?.password) {
-                    log('reject.missing_credentials');
                     return null;
                 }
 
-                let user;
-                try {
-                    user = await prisma.user.findUnique({
-                        where: { email: credentials.email.toLowerCase().trim() },
-                    });
-                } catch (err) {
-                    log('error.db_lookup', { message: err?.message });
-                    throw err;
-                }
-
+                const user = await prisma.user.findUnique({
+                    where: { email: credentials.email.toLowerCase().trim() },
+                });
                 if (!user) {
-                    log('reject.no_such_user');
                     return null;
                 }
 
-                let isValid;
-                try {
-                    isValid = await bcrypt.compare(credentials.password, user.passwordHash);
-                } catch (err) {
-                    log('error.bcrypt', { message: err?.message });
-                    throw err;
-                }
-
+                const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
                 if (!isValid) {
-                    log('reject.bad_password');
                     return null;
                 }
 
-                log('success', { userId: user.id });
                 return { id: user.id, email: user.email };
             },
         }),

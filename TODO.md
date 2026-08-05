@@ -21,22 +21,29 @@ Currently two external services are load-bearing:
 in-house), evaluate Xiaomi Cloud self-hosting separately once that's proven
 out. Revisit and write a concrete implementation plan before starting.
 
-## Full automation: pull new Xiaomi data and push to Garmin on a schedule
+## Full automation: pull new Xiaomi data and push to Garmin on a schedule — DONE
 
-Goal: no manual "Get Measurements" / "Sync Next Batch" clicking at all — a
-scheduled job periodically checks Xiaomi Cloud for new weigh-ins and pushes
-each one to Garmin with its correct date, automatically.
+Implemented once manual sync was confirmed solid (correct dates, no dupes,
+no more silent hangs):
 
-Sketch:
-- Vercel Cron (`vercel.json` `crons`) hitting a new `/api/cron/sync-all` route
-  daily (or a few times a day).
-- That route, for every user with both XiaomiCredential and GarminCredential
-  saved: fetch Xiaomi Cloud weights, import new ones (existing
-  `/api/measurements/import` dedup logic already handles "already have this
-  one"), then run the same batched Garmin push used by `/api/sync/garmin/bulk`
-  (small batches, time-budget guard — same reasoning as the manual flow).
-- Needs a CRON_SECRET (or Vercel's built-in cron auth header) so the route
-  can't be triggered by randoms.
-- Only start this once manual sync is confirmed solid (correct dates, batch
-  size/timeout handling proven) — don't want a cron job silently re-hitting
-  the same bug at 3am with nobody watching.
+- `pages/api/cron/sync.js` — for every user with both XiaomiCredential and
+  GarminCredential saved: `fetchAndImportXiaomiWeights` (lib/xiaomiSync.js)
+  pulls latest Xiaomi Cloud data and imports new records (dedup'd via the
+  existing sourceDate unique constraint), then `syncPendingMeasurementsBatch`
+  (lib/garminSync.js) pushes up to 10 pending measurements to Garmin.
+  Auth'd via `CRON_SECRET` in the `x-cron-secret` header.
+- Triggered by **GitHub Actions** (`.github/workflows/sync-cron.yml`), not
+  Vercel's own Cron Jobs — Hobby plan caps Vercel Cron at once/day, way too
+  coarse. GitHub Actions' `schedule` runs every 10 minutes instead, calling
+  the endpoint over plain HTTPS. Also has `workflow_dispatch` for a manual
+  "run it now" trigger from the Actions tab.
+- `/sync/garmin-bulk` now polls `GET /api/sync/garmin/bulk` every 15s and
+  shows live totals instead of requiring "batch size + click" — the manual
+  POST is still there as a "sync now, don't wait for the next auto-run"
+  fallback, but the cron job is the primary path.
+
+Remaining loose end: if the Garmin/Xiaomi proxy starts throttling during an
+unattended cron run, nobody's watching to notice the way we were during
+manual testing — errors land in `syncError` on the Measurement row and in
+Vercel's function logs, but there's no alerting. Fine for personal-scale use;
+revisit if this becomes flaky unattended.

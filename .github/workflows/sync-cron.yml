@@ -1,0 +1,21 @@
+name: Auto-sync Xiaomi -> Garmin
+
+# Vercel's own Cron Jobs are capped at once/day on the Hobby plan (too coarse for
+# "keep going in the background"), so this runs on GitHub Actions instead and just
+# calls the app's authenticated cron endpoint. Runs independently of any browser
+# being open.
+on:
+  schedule:
+    - cron: '*/10 * * * *' # every 10 minutes (GitHub Actions' practical minimum granularity)
+  workflow_dispatch: {} # allows manually triggering a run from the Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call sync endpoint
+        run: |
+          curl -sS -X POST "${{ secrets.SYNC_URL }}" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -w "\nHTTP %{http_code}\n" \
+            --max-time 45

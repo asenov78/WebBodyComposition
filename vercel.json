@@ -2,6 +2,9 @@
   "functions": {
     "pages/api/sync/garmin/bulk.js": {
       "maxDuration": 30
+    },
+    "pages/api/cron/sync.js": {
+      "maxDuration": 30
     }
   }
 }
