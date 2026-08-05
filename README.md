@@ -102,8 +102,8 @@ picks up where it left off.
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in DATABASE_URL / POSTGRES_PRISMA_URL, AUTH_SECRET,
-                              # ENCRYPTION_KEY, CRON_SECRET, NEXTAUTH_URL
+cp .env.example .env.local   # fill in POSTGRES_PRISMA_URL / POSTGRES_URL_NON_POOLING,
+                              # AUTH_SECRET, ENCRYPTION_KEY, CRON_SECRET, NEXTAUTH_URL
 npx prisma db push           # Prisma CLI needs .env, not .env.local — see below
 npm run dev
 ```
