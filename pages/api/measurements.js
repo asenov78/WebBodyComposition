@@ -15,7 +15,10 @@ export default async function handler(req, res) {
 
     const measurements = await prisma.measurement.findMany({
         where: { userId: session.user.id },
-        orderBy: { createdAt: 'desc' },
+        // Most recent *weigh-in*, not most recent DB-save time — a bulk import creates
+        // a batch of rows at nearly the same createdAt, which made this list useless
+        // for "what did I actually measure recently".
+        orderBy: { sourceDate: 'desc' },
         take: 10,
     });
 
