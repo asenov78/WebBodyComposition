@@ -12,10 +12,23 @@ export default async function handler(req, res) {
     if (!session?.user?.id) {
         return res.status(401).json({ error: 'Not authenticated.' });
     }
+    const userId = session.user.id;
+
+    // ?mode=series returns the full synced history in chronological order, for
+    // charting — separate from the default "recent activity" list below, which is
+    // sorted/filtered for a different purpose (most-recently-touched, not oldest-first).
+    if (req.query.mode === 'series') {
+        const series = await prisma.measurement.findMany({
+            where: { userId, syncedToGarmin: true },
+            orderBy: { sourceDate: 'asc' },
+            select: { sourceDate: true, weight: true, bmi: true, fat: true },
+        });
+        return res.status(200).json({ series });
+    }
 
     const measurements = await prisma.measurement.findMany({
         where: {
-            userId: session.user.id,
+            userId,
             // "Recent syncs" should mean rows a sync attempt actually touched (success
             // or failure), not just recently-imported-but-still-pending rows — otherwise
             // it fills up with '—' status for whatever has the newest weigh-in date,
