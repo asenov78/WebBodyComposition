@@ -35,11 +35,15 @@ model GarminCredential {
   updatedAt     DateTime @updatedAt
 }
 
-// Historical log of what got pushed to Garmin, so the UI can show "last synced" etc.
+// Imported from Xiaomi Cloud (or entered manually) and, once synced, pushed to Garmin.
+// sourceDate is the actual weigh-in timestamp from the scale/cloud — unique per user so
+// re-importing the same Xiaomi Cloud page twice doesn't create duplicate rows.
 model Measurement {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sourceDate       DateTime?
 
   weight           Float
   bmi              Float?
@@ -51,6 +55,9 @@ model Measurement {
   metabolicAge     Float?
   bodyType         Float?
 
-  syncedToGarmin   Boolean  @default(false)
-  createdAt        DateTime @default(now())
+  syncedToGarmin   Boolean   @default(false)
+  syncError        String?
+  createdAt        DateTime  @default(now())
+
+  @@unique([userId, sourceDate])
 }

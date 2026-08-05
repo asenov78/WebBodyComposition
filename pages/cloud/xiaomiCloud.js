@@ -1,8 +1,6 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import useLocalStorageState from 'use-local-storage-state';
-import { useBodyCompositionContext } from '../../contexts/bodycomposition.context';
 
 const regionOptions = [
     { value: 'cn', label: 'China' },
@@ -31,8 +29,6 @@ const weightEndpoint = `${serverUrl}/weights`;
 const loginEndpoint = `${serverUrl}/login`;
 
 export default function XiaomiCloud() {
-    const router = useRouter();
-    const { setBodyComposition } = useBodyCompositionContext();
     const [userId, setUserId] = useLocalStorageState('xiaomiCloud.userId', {
         defaultValue: '',
     });
@@ -160,9 +156,20 @@ export default function XiaomiCloud() {
                 .sort((left, right) => new Date(right.date) - new Date(left.date));
 
             setWeightRecords(allRecords);
-            setMessage(allRecords.length
-                ? `Loaded ${allRecords.length} weight record${allRecords.length === 1 ? '' : 's'}.`
-                : responseText || 'Measurements request sent successfully.');
+
+            if (allRecords.length > 0) {
+                const importRes = await fetch('/api/measurements/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ records: allRecords }),
+                });
+                const importData = await importRes.json();
+                setMessage(importRes.ok
+                    ? `Loaded ${allRecords.length} record${allRecords.length === 1 ? '' : 's'}, saved ${importData.imported} new.`
+                    : `Loaded ${allRecords.length} record${allRecords.length === 1 ? '' : 's'}, but saving them failed.`);
+            } else {
+                setMessage(responseText || 'Measurements request sent successfully.');
+            }
         } catch (error) {
             setMessage(error.message || 'Unable to get measurements.');
         } finally {
@@ -290,27 +297,6 @@ export default function XiaomiCloud() {
                 loginPollingControllerRef.current = null;
             }
         }
-    };
-
-    const mapRecordToBodyComposition = (record) => ({
-        weight: record.weightKg ?? 0,
-        bmi: record.bmi ?? 0,
-        fat: record.bodyFat ?? 0,
-        muscleMass: record.muscleMass ?? 0,
-        waterPercentage: record.bodyWater ?? 0,
-        boneMass: record.boneMass ?? 0,
-        visceralFat: record.visceralFat ?? 0,
-        metabolicAge: record.metabolicAge ?? 0,
-        bodyType: record.bodyScore ?? 0,
-        idealWeight: 0,
-        proteinPercentage: record.proteinMass ?? 0,
-        lbmCoefficient: 0,
-        mbr: record.basalMetabolism ?? 0,
-    });
-
-    const goToGarminWithRecord = async (record) => {
-        setBodyComposition(mapRecordToBodyComposition(record));
-        await router.push('/sync/garmin');
     };
 
     const formatDate = (value) => {
@@ -493,7 +479,6 @@ export default function XiaomiCloud() {
                                 <table className='min-w-full divide-y divide-gray-200 text-sm'>
                                     <thead className='bg-gray-50'>
                                         <tr>
-                                            <th className='px-4 py-3 text-left font-semibold text-gray-700'>Actions</th>
                                             <th className='px-4 py-3 text-left font-semibold text-gray-700'>Date</th>
                                             {metricFields.map((field) => (
                                                 <th key={field.key} className='px-4 py-3 text-left font-semibold text-gray-700'>
@@ -506,15 +491,6 @@ export default function XiaomiCloud() {
                                     <tbody className='divide-y divide-gray-100 bg-white'>
                                         {weightRecords.map((record, index) => (
                                             <tr key={`${record.date || 'record'}-${index}`} className='hover:bg-gray-50'>
-                                                <td className='whitespace-nowrap px-4 py-3'>
-                                                    <button
-                                                        type='button'
-                                                        onClick={() => goToGarminWithRecord(record)}
-                                                        className='rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700'
-                                                    >
-                                                        Select
-                                                    </button>
-                                                </td>
                                                 <td className='whitespace-nowrap px-4 py-3 font-medium text-gray-900'>
                                                     {formatDate(record.date)}
                                                 </td>
@@ -555,6 +531,15 @@ export default function XiaomiCloud() {
                             >
                                 Cancel Login
                             </button>
+                        ) : weightRecords.length > 0 ? (
+                            <Link href="/sync/garmin-bulk" passHref className='ml-auto'>
+                                <button
+                                    type='button'
+                                    className='bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded mt-5'
+                                >
+                                    Continue → Connect to Garmin
+                                </button>
+                            </Link>
                         ) : (
                             <button
                                 form='xiaomi-cloud-form'
