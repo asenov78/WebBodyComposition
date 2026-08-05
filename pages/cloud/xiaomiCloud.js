@@ -155,14 +155,13 @@ export default function XiaomiCloud() {
             }
 
             const parsedRecords = parseWeightRecords(responseText);
-            const latestRecords = parsedRecords
+            const allRecords = parsedRecords
                 .slice()
-                .sort((left, right) => new Date(right.date) - new Date(left.date))
-                .slice(0, 10);
+                .sort((left, right) => new Date(right.date) - new Date(left.date));
 
-            setWeightRecords(latestRecords);
-            setMessage(latestRecords.length
-                ? `Loaded ${latestRecords.length} latest weight record${latestRecords.length === 1 ? '' : 's'}.`
+            setWeightRecords(allRecords);
+            setMessage(allRecords.length
+                ? `Loaded ${allRecords.length} weight record${allRecords.length === 1 ? '' : 's'}.`
                 : responseText || 'Measurements request sent successfully.');
         } catch (error) {
             setMessage(error.message || 'Unable to get measurements.');
