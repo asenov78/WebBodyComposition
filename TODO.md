@@ -20,3 +20,23 @@ Currently two external services are load-bearing:
 **Plan**: start with Garmin (lower risk/effort, keeps credentials fully
 in-house), evaluate Xiaomi Cloud self-hosting separately once that's proven
 out. Revisit and write a concrete implementation plan before starting.
+
+## Full automation: pull new Xiaomi data and push to Garmin on a schedule
+
+Goal: no manual "Get Measurements" / "Sync Next Batch" clicking at all — a
+scheduled job periodically checks Xiaomi Cloud for new weigh-ins and pushes
+each one to Garmin with its correct date, automatically.
+
+Sketch:
+- Vercel Cron (`vercel.json` `crons`) hitting a new `/api/cron/sync-all` route
+  daily (or a few times a day).
+- That route, for every user with both XiaomiCredential and GarminCredential
+  saved: fetch Xiaomi Cloud weights, import new ones (existing
+  `/api/measurements/import` dedup logic already handles "already have this
+  one"), then run the same batched Garmin push used by `/api/sync/garmin/bulk`
+  (small batches, time-budget guard — same reasoning as the manual flow).
+- Needs a CRON_SECRET (or Vercel's built-in cron auth header) so the route
+  can't be triggered by randoms.
+- Only start this once manual sync is confirmed solid (correct dates, batch
+  size/timeout handling proven) — don't want a cron job silently re-hitting
+  the same bug at 3am with nobody watching.

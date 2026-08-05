@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 
 export default function GarminBulkSync() {
-    const router = useRouter();
     const { status: authStatus } = useSession();
 
     const [connection, setConnection] = useState({ loading: true, connected: false, email: '' });
@@ -15,6 +13,11 @@ export default function GarminBulkSync() {
     const [showMFACode, setShowMFACode] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [result, setResult] = useState(null);
+    const [totals, setTotals] = useState({ synced: 0, failed: 0 });
+    // Small on purpose: sync a couple, confirm they land on Garmin with the right
+    // dates, then bump this up and keep going — instead of firing hundreds of
+    // requests in one go (which used to time out with no useful error).
+    const [batchSize, setBatchSize] = useState(2);
 
     useEffect(() => {
         if (authStatus !== 'authenticated') return;
@@ -27,32 +30,38 @@ export default function GarminBulkSync() {
     const runSync = async (event) => {
         event.preventDefault();
         setIsSyncing(true);
-        setResult(null);
 
         try {
             const res = await fetch('/api/sync/garmin/bulk', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, mfaCode, clientId }),
+                body: JSON.stringify({ email, password, mfaCode, clientId, limit: batchSize }),
             });
+
+            if (!res.ok) {
+                setResult({ error: `Server error (HTTP ${res.status}). Try a smaller batch size.` });
+                return;
+            }
+
             const data = await res.json();
 
             if (data.mfaRequired) {
                 setShowMFACode(true);
                 setClientId(data.clientId);
-                setResult({ message: 'MFA/2FA code required — enter it below and continue.' });
+                setResult({ ...data, message: 'MFA/2FA code required — enter it below and continue.' });
                 return;
             }
 
             setShowMFACode(false);
             setPassword('');
             setResult(data);
+            setTotals((t) => ({ synced: t.synced + (data.synced || 0), failed: t.failed + (data.failed || 0) }));
             if (data.synced > 0) {
                 setConnection((c) => ({ ...c, connected: true, email: email || c.email }));
             }
         } catch (err) {
             console.log(err);
-            setResult({ error: 'Something went wrong. Check the console.' });
+            setResult({ error: `Network/client error: ${err?.message || err}` });
         } finally {
             setIsSyncing(false);
         }
@@ -69,12 +78,14 @@ export default function GarminBulkSync() {
         );
     }
 
+    const remaining = result?.remaining ?? result?.totalPending ?? null;
+
     return (
         <div className='flex flex-wrap'>
             <div className='w-full max-w-sm ml-auto mr-auto'>
                 <h1 className='text-2xl font-bold text-center mb-5'>Connect to Garmin Connect</h1>
                 <p className='text-center text-gray-600 mb-6'>
-                    Every measurement you&apos;ve imported from Xiaomi Cloud that hasn&apos;t been sent yet will be pushed to Garmin Connect in one go.
+                    Pushes measurements imported from Xiaomi Cloud, a small batch at a time, using each one&apos;s real weigh-in date.
                 </p>
 
                 <form onSubmit={runSync}>
@@ -108,6 +119,16 @@ export default function GarminBulkSync() {
                         </>
                     )}
 
+                    <label className="block mt-4">
+                        <span className="text-gray-700">Batch size (how many to sync this click)</span>
+                        <input
+                            type="number" min={1} max={50} value={batchSize}
+                            onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                        />
+                        <span className="text-xs text-gray-500">Start small (2), check Garmin Connect, then raise it once you trust the dates are right.</span>
+                    </label>
+
                     {showMFACode && (
                         <label className="block mt-4">
                             <span className="text-gray-700">MFA Code</span>
@@ -122,13 +143,19 @@ export default function GarminBulkSync() {
                     {result && (
                         <div className="mt-4 text-center text-sm">
                             {result.error && <p className="text-red-600">{result.error}</p>}
-                            {result.message && !result.error && <p className="text-gray-700">{result.message}</p>}
+                            {result.firstError && <p className="text-red-600">❌ {result.firstError}</p>}
+                            {result.message && !result.error && !result.firstError && <p className="text-gray-700">{result.message}</p>}
                             {typeof result.synced === 'number' && (
                                 <p className="mt-1">
-                                    ✅ {result.synced} synced
+                                    ✅ {result.synced} synced this batch
                                     {result.failed > 0 && <span className="text-red-600"> · ⚠️ {result.failed} failed</span>}
-                                    {result.total === 0 && ' — nothing was pending.'}
                                 </p>
+                            )}
+                            {(totals.synced > 0 || totals.failed > 0) && (
+                                <p className="text-xs text-gray-500 mt-1">Session total: {totals.synced} synced, {totals.failed} failed</p>
+                            )}
+                            {remaining !== null && (
+                                <p className="mt-1 font-semibold">{remaining} still pending</p>
                             )}
                         </div>
                     )}
@@ -141,7 +168,7 @@ export default function GarminBulkSync() {
                         </Link>
                         <button type="submit" disabled={isSyncing || connection.loading}
                             className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-5 ml-auto disabled:opacity-50'>
-                            {isSyncing ? 'Syncing…' : 'Sync All to Garmin'}
+                            {isSyncing ? 'Syncing…' : remaining === 0 ? 'All synced' : 'Sync Next Batch'}
                         </button>
                     </div>
                 </form>

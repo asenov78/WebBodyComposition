@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "pages/api/sync/garmin/bulk.js": {
+      "maxDuration": 30
+    }
+  }
+}
