@@ -1,10 +1,12 @@
 import { useState } from "react"
 import Link from 'next/link'
 import Image from 'next/image'
+import { useSession, signOut } from 'next-auth/react'
 import scaleIcon from '../public/weighing-scale-64.png'
 
 export default function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { data: session, status } = useSession();
 
     function toggleMenu() { setIsMenuOpen(!isMenuOpen) };
 
@@ -50,7 +52,28 @@ export default function Navbar() {
                         </Link>
 
                     </div>
-                    <div>
+                    <div className="flex items-center gap-3">
+                        {status === 'authenticated' && (
+                            <>
+                                <span className="text-blue-100 text-sm">{session.user?.email}</span>
+                                <a href="#" onClick={(e) => { e.preventDefault(); signOut(); }}
+                                    className="inline-block text-sm px-4 py-2 leading-none border rounded text-white border-white hover:border-transparent hover:text-blue-500 hover:bg-white">
+                                    Log Out
+                                </a>
+                            </>
+                        )}
+                        {status === 'unauthenticated' && (
+                            <>
+                                <Link href="/login" onClick={() => toggleMenu()}
+                                    className="inline-block text-sm px-4 py-2 leading-none border rounded text-white border-white hover:border-transparent hover:text-blue-500 hover:bg-white">
+                                    Log In
+                                </Link>
+                                <Link href="/register" onClick={() => toggleMenu()}
+                                    className="inline-block text-sm px-4 py-2 leading-none border rounded text-white border-white hover:border-transparent hover:text-blue-500 hover:bg-white">
+                                    Register
+                                </Link>
+                            </>
+                        )}
                         <a href="https://play.google.com/store/apps/details?id=com.lukaszswiderski.MiScaleExporter" target="_blank" className="inline-block text-sm px-4 py-2 leading-none border rounded text-white border-white hover:border-transparent hover:text-blue-500 hover:bg-white mt-4 lg:mt-0">Android Application</a>
                     </div>
                 </div>

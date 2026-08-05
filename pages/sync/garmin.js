@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import axios from 'axios';
-import useLocalStorageState from 'use-local-storage-state'
+import { useSession } from 'next-auth/react';
 import { useBodyCompositionContext } from '../../contexts/bodycomposition.context';
 
 export default function Garmin() {
-    const { bodyComposition, setBodyComposition } = useBodyCompositionContext();
+    const { status: authStatus } = useSession();
+    const { bodyComposition } = useBodyCompositionContext();
     const [weight, setWeight] = useState(bodyComposition.weight ?? 0);
     const [bmi, setBmi] = useState(bodyComposition.bmi ?? 0);
     const [fat, setFat] = useState(bodyComposition.fat ?? 0);
@@ -15,476 +15,189 @@ export default function Garmin() {
     const [visceralFat, setVisceralFat] = useState(bodyComposition.visceralFat ?? 0);
     const [metabolicAge, setMetabolicAge] = useState(bodyComposition.metabolicAge ?? 0);
     const [bodyType, setBodyType] = useState(bodyComposition.bodyType ?? 0);
-    const [email, setEmail] = useLocalStorageState('email', {
-        defaultValue: ''
-    });
+
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showMFACode, setShowMFACode] = useState(false);
     const [mfaCode, setMfaCode] = useState('');
     const [clientId, setClientId] = useState('');
-    const [accessToken, setAccessToken] = useLocalStorageState('accessToken', {
-        defaultValue: ''
-    });
-    const [tokenSecret, setTokenSecret] = useLocalStorageState('tokenSecret', {
-        defaultValue: ''
-    });
-    const [saveToken, setSaveToken] = useLocalStorageState('saveToken', {
-        defaultValue: false
-    });
+    const [rememberCredentials, setRememberCredentials] = useState(true);
+
+    // Whether the server already has Garmin creds on file for this account.
+    const [connection, setConnection] = useState({ loading: true, connected: false, email: '' });
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        let value;
-        value = (localStorage.getItem("saveToken") || false) === 'true'
-        setSaveToken(value)
-    }, [])
-    const checkSaveTokenHandler = () => {
-        localStorage.setItem("saveToken", !saveToken)
-        setSaveToken(!saveToken)
-    }
+        if (authStatus !== 'authenticated') return;
+        fetch('/api/sync/garmin')
+            .then((r) => r.json())
+            .then((data) => setConnection({ loading: false, ...data }))
+            .catch(() => setConnection({ loading: false, connected: false }));
+    }, [authStatus]);
 
-    const isTokenSaved = saveToken && accessToken && tokenSecret;
-
-    const clearTokens = async () => {
-        setAccessToken('');
-        setTokenSecret('');
-    }
-
-    const preapareApiRequest = () => {
-        const payload =
-        {
-            timeStamp: -1,
-            weight: parseFloat(weight),
-            percentFat: parseFloat(fat ?? 0),
-            percentHydration: parseFloat(waterPercentage ?? 0),
-            boneMass: parseFloat(boneMass ?? 0),
-            muscleMass: parseFloat(muscleMass ?? 0),
-            visceralFatRating: parseFloat(visceralFat ?? 0),
-            physiqueRating: parseFloat(bodyType ?? 0),
-            metabolicAge: parseFloat(metabolicAge ?? 0),
-            bodyMassIndex: parseFloat(bmi ?? 0),
-            email,
-            password,
-            mfaCode,
-            clientId,
-            accessToken,
-            tokenSecret,
-        }
-
-        return payload;
-    }
-
-
-    const generateFitFile = async (event) => {
-        event.preventDefault();
-        const payload = { ...preapareApiRequest(), createOnlyFile: true };
-        try {
-            let axiosConfig = {
-                headers: {
-                    'accept': 'application/json',
-                    'Content-Type': 'application/json',
-                },
-                responseType: 'blob'
-            };
-
-            await axios
-                .post('https://frog01-20364.wykr.es/upload', payload, axiosConfig)
-                .then(response => {
-                    // create file link in browser's memory
-                    const href = URL.createObjectURL(response.data);
-
-                    // create "a" HTML element with href to file & click
-                    const link = document.createElement('a');
-                    link.href = href;
-                    link.setAttribute('download', `garmin_weight_${(new Date().toJSON().slice(0, 10))}.fit`); //or any other extension
-                    document.body.appendChild(link);
-                    link.click();
-
-                    // clean up "a" element & remove ObjectURL
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(href);
-                })
-                .catch(error => {
-                    let errorMessage = error?.response?.data;
-                    if (errorMessage == undefined && error) {
-                        errorMessage = `${error.code} ${error.message}`
-                        if (error?.code === 'ERR_NETWORK') {
-                            errorMessage = "Network error, check your connection, or use VPN";
-                        }
-                    }
-                    console.log(error);
-                    alert(`${errorMessage}`);
-
-                });
-
-        }
-        catch (err) {
-            console.log(err);
-            alert("Error, check console");
-        }
-    }
+    const disconnect = async () => {
+        await fetch('/api/sync/garmin', { method: 'DELETE' });
+        setConnection({ loading: false, connected: false });
+    };
 
     const submitGarminForm = async (event) => {
         event.preventDefault();
+        setIsSubmitting(true);
 
-        const payload = preapareApiRequest();
+        const payload = {
+            weight: parseFloat(weight), bmi: parseFloat(bmi), fat: parseFloat(fat ?? 0),
+            muscleMass: parseFloat(muscleMass ?? 0), waterPercentage: parseFloat(waterPercentage ?? 0),
+            boneMass: parseFloat(boneMass ?? 0), visceralFat: parseFloat(visceralFat ?? 0),
+            metabolicAge: parseFloat(metabolicAge ?? 0), bodyType: parseFloat(bodyType ?? 0),
+            email, password, mfaCode, clientId, rememberCredentials,
+        };
+
         try {
-            let axiosConfig = {
-                headers: {
-                    'accept': 'application/json',
-                    'Content-Type': 'application/json',
+            const res = await fetch('/api/sync/garmin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+
+            if (res.status === 201) {
+                alert('Success. Uploaded to Garmin Connect.');
+                setShowMFACode(false);
+                setPassword('');
+                if (rememberCredentials) {
+                    setConnection({ loading: false, connected: true, email, hasToken: true });
                 }
-            };
-
-            await axios
-                .post('https://frog01-20364.wykr.es/upload', payload, axiosConfig)
-                .then(response => {
-                    console.log(response);
-                    if (saveToken && response.data.uploadResult.accessToken && response.data.uploadResult.tokenSecret) {
-                        setAccessToken(response.data.uploadResult.accessToken);
-                        setTokenSecret(response.data.uploadResult.tokenSecret);
-                    }
-                    if (response.status === 201) {
-                        alert("Success. Uploaded.");
-                        setShowMFACode(false);
-                    } else if (response.status === 200) {
-                        setShowMFACode(true);
-                        setClientId(response.data.clientId);
-                        alert("MFA/2FA Code required. Please provide it.");
-                    }
-                    else {
-                        alert(`Response Status: ${response.status}`);
-                    }
-                    if (response.status === 401) {
-                        clearTokens();
-                    }
-
-                })
-                .catch(error => {
-                    console.log(error);
-                    let errorMessage = error?.response?.data;
-                    if (errorMessage && errorMessage.includes('401 (Unauthorized)')) {
-                        clearTokens();
-                    }
-                    if (errorMessage == undefined && error) {
-                        errorMessage = `${error.code} ${error.message}`
-                        if (error?.code === 'ERR_NETWORK') {
-                            errorMessage = "Network error, check your connection, or use VPN";
-                        }
-                    }
-                    alert(`${errorMessage}`);
-                });
-
-        }
-        catch (err) {
-            debugger;
+            } else if (res.status === 200 && data.clientId) {
+                setShowMFACode(true);
+                setClientId(data.clientId);
+                alert('MFA/2FA code required. Please provide it.');
+            } else if (res.status === 401) {
+                alert('Garmin login rejected. Please re-enter your credentials.');
+                setConnection({ loading: false, connected: false });
+            } else {
+                alert(data.error || `Response Status: ${res.status}`);
+            }
+        } catch (err) {
             console.log(err);
-            alert("Error, check console");
+            alert('Error, check console');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
-    return (
-        <>
+    if (authStatus === 'unauthenticated') {
+        return (
             <div className='flex flex-wrap'>
-                <div className='w-full max-w-sm ml-auto mr-auto'>
-                    <h1 className='text-2xl font-bold text-center mb-5'>Garmin Body Composition Form</h1>
-                    <form onSubmit={submitGarminForm}
-                        className=''>
-                        <div className=' flex justify-between gap-2'>
-                            <label className="block">
-                                <span className="text-gray-700">Weight (Kg)</span>
-                                <input
-                                    type="number"
-                                    name="weight"
-                                    step="0.01"
-                                    min={0}
-                                    value={weight}
-                                    onChange={(e) => setWeight(e.target.value)}
-                                    className="
-                                mt-1
-                                block
-                                w-full
-                                rounded-md
-                                border-gray-300
-                                shadow-sm
-                                focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50
-                              "
-                                    placeholder=""
-                                />
-                            </label>
-                            <label className="block">
-                                <span className="text-gray-700">BMI</span>
-                                <input
-                                    type="number"
-                                    name="bmi"
-                                    step="0.01"
-                                    min={0}
-                                    value={bmi}
-                                    onChange={(e) => setBmi(e.target.value)}
-                                    className="
-                                mt-1
-                                block
-                                w-full
-                                rounded-md
-                                border-gray-300
-                                shadow-sm
-                                focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50
-                              "
-                                    placeholder=""
-                                />
-                            </label>
-                        </div>
-                        <div className='flex justify-between gap-2'>
-                            <label className="block">
-                                <span className="text-gray-700">Body Fat (%)</span>
-                                <input
-                                    type="number"
-                                    name="fat"
-                                    step="0.01"
-                                    min={0}
-                                    value={fat}
-                                    onChange={(e) => setFat(e.target.value)}
-                                    className="
-                        mt-1
-                        block
-                        w-full
-                        rounded-md
-                        border-gray-300
-                        shadow-sm
-                        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50
-                      "
-                                    placeholder=""
-                                />
-                            </label>
-                            <label className="block">
-                                <span className="text-gray-700">Muscle Mass (kg)</span>
-                                <input
-                                    type="number"
-                                    name="muscleMass"
-                                    step="0.01"
-                                    min={0}
-                                    value={muscleMass}
-                                    onChange={(e) => setMuscleMass(e.target.value)}
-                                    className="
-                        mt-1
-                        block
-                        w-full
-                        rounded-md
-                        border-gray-300
-                        shadow-sm
-                        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50
-                      "
-                                    placeholder=""
-                                />
-                            </label></div>
-                        <div className='flex justify-between gap-2'>
-                            <label className="block">
-                                <span className="text-gray-700">Body Water (%)</span>
-                                <input
-                                    type="number"
-                                    name="waterPercentage"
-                                    step="0.01"
-                                    min={0}
-                                    value={waterPercentage}
-                                    onChange={(e) => setWaterPercentage(e.target.value)}
-                                    className="
-                        mt-1
-                        block
-                        w-full
-                        rounded-md
-                        border-gray-300
-                        shadow-sm
-                        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50
-                      "
-                                    placeholder=""
-                                />
-                            </label>
-                            <label className="block">
-                                <span className="text-gray-700">Bone Mass (Kg)</span>
-                                <input
-                                    type="number"
-                                    name="boneMass"
-                                    step="0.01"
-                                    min={0}
-                                    value={boneMass}
-                                    onChange={(e) => setBoneMass(e.target.value)}
-                                    className="
-                        mt-1
-                        block
-                        w-full
-                        rounded-md
-                        border-gray-300
-                        shadow-sm
-                        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50
-                      "
-                                    placeholder=""
-                                />
-                            </label></div>
-                        <div className='flex justify-between gap-2'>
-                            <label className="block">
-                                <span className="text-gray-700">Visceral Fat</span>
-                                <input
-                                    type="number"
-                                    name="visceralFat"
-                                    step="0.01"
-                                    min={0}
-                                    value={visceralFat}
-                                    onChange={(e) => setVisceralFat(e.target.value)}
-                                    className="
-                        mt-1
-                        block
-                        w-full
-                        rounded-md
-                        border-gray-300
-                        shadow-sm
-                        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50
-                      "
-                                    placeholder=""
-                                />
-                            </label>
-                            <label className="block">
-                                <span className="text-gray-700">Metabolic Age (years)</span>
-                                <input
-                                    type="number"
-                                    name="metabolicAge"
-                                    step="0.01"
-                                    min={0}
-                                    value={metabolicAge}
-                                    onChange={(e) => setMetabolicAge(e.target.value)}
-                                    className="
-                        mt-1
-                        block
-                        w-full
-                        rounded-md
-                        border-gray-300
-                        shadow-sm
-                        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50
-                      "
-                                    placeholder=""
-                                />
-                            </label>
-                        </div>
-                        <label className="block">
-                            <span className="text-gray-700">Physique Raiting</span>
-                            <input
-                                type="number"
-                                name="bodyType"
-                                min={0}
-                                value={bodyType}
-                                onChange={(e) => setBodyType(e.target.value)}
-                                className="
-                        mt-1
-                        block
-                        w-full
-                        rounded-md
-                        border-gray-300
-                        shadow-sm
-                        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50
-                      "
-                                placeholder=""
-                            />
-                        </label>
-
-
-                        {!isTokenSaved && <label className="block mt-10">
-                            <span className="text-gray-700">Email address</span>
-                            <input
-                                type="email"
-                                name="password"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                className="
-               mt-1
-               block
-               w-full
-               rounded-md
-               border-gray-300
-               shadow-sm
-               focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50
-             "
-                                placeholder="john@example.com"
-                            />
-                        </label>}
-                        {!isTokenSaved && <label className="block">
-                            <span className="text-gray-700">Password</span>
-                            <input
-                                type="password"
-                                name='password'
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                className="
-                      mt-1
-                      block
-                      w-full
-                      rounded-md
-                      border-gray-300
-                      shadow-sm
-                      focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50
-                    "
-                                placeholder="********"
-                            />
-                        </label>}
-                        {showMFACode && <label className="block mt-10">
-                            <span className="text-gray-700">MFA Code</span>
-                            <input
-                                type="text"
-                                name="mfaCode"
-                                value={mfaCode}
-                                onChange={(e) => setMfaCode(e.target.value)}
-                                required
-                                className="
-               mt-1
-               block
-               w-full
-               rounded-md
-               border-gray-300
-               shadow-sm
-               focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50
-             "
-                                placeholder="123456"
-                            />
-                        </label>}
-                        {!isTokenSaved && <div className="mt-2">
-                            <input type="checkbox" id="saveToken" checked={saveToken} onChange={checkSaveTokenHandler} />
-                            <label htmlFor="saveToken" className="ml-2">remember me (save access token in the browser) </label>
-                        </div>
-                        }
-                        {isTokenSaved && <div className="mt-5">
-                            <label className="block text-center">
-                                <div>Logged as {email}</div>
-                                <a href='#' className="underline" onClick={clearTokens}>
-                                    Clear access tokens and change credencials
-                                </a>
-                            </label>
-                        </div>}
-                        <div className='flex flex-wrap'>
-                            <Link href="/" passHref>
-                                <button
-                                    type="button"
-                                    className='bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded mt-5 mr-auto'
-                                >  &lt; Back
-                                </button>
-                            </Link>
-                            <button
-                                type="submit"
-                                className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-5 ml-auto'
-                            > Send to Garmin Connect
-                            </button>
-                            <div className="block text-justify">
-                                <a href='#' className="underline block mt-5 mb-2 text-center" onClick={generateFitFile}>
-                                    Generate only .fit file without Email and Password.
-                                </a>
-                                <span>It can be used to manually upload data to the <a href='https://connect.garmin.com/modern/import-data' className="underline" target='_blank' >
-                                    Garmin Connect website
-                                </a> in case you don&apos;t want to provide your credentials or if the API has a problem with too many requests.</span>
-
-                            </div>
-
-                        </div>
-                    </form>
+                <div className='w-full max-w-sm ml-auto mr-auto text-center'>
+                    <h1 className='text-2xl font-bold mb-5'>Log in required</h1>
+                    <p className="mb-5">Create an account or log in to save your Garmin connection and sync automatically next time.</p>
+                    <Link href="/login" className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded'>Log In</Link>
                 </div>
             </div>
-        </>
+        );
+    }
+
+    const measurementFields = [
+        ['Weight (Kg)', weight, setWeight, 'weight'],
+        ['BMI', bmi, setBmi, 'bmi'],
+        ['Body Fat (%)', fat, setFat, 'fat'],
+        ['Muscle Mass (kg)', muscleMass, setMuscleMass, 'muscleMass'],
+        ['Body Water (%)', waterPercentage, setWaterPercentage, 'waterPercentage'],
+        ['Bone Mass (Kg)', boneMass, setBoneMass, 'boneMass'],
+        ['Visceral Fat', visceralFat, setVisceralFat, 'visceralFat'],
+        ['Metabolic Age (years)', metabolicAge, setMetabolicAge, 'metabolicAge'],
+    ];
+
+    return (
+        <div className='flex flex-wrap'>
+            <div className='w-full max-w-sm ml-auto mr-auto'>
+                <h1 className='text-2xl font-bold text-center mb-5'>Garmin Body Composition Form</h1>
+                <form onSubmit={submitGarminForm}>
+                    <div className='grid grid-cols-2 gap-2'>
+                        {measurementFields.map(([label, value, setter, name]) => (
+                            <label className="block" key={name}>
+                                <span className="text-gray-700">{label}</span>
+                                <input
+                                    type="number" name={name} step="0.01" min={0} value={value}
+                                    onChange={(e) => setter(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                />
+                            </label>
+                        ))}
+                    </div>
+                    <label className="block mt-2">
+                        <span className="text-gray-700">Physique Rating</span>
+                        <input
+                            type="number" name="bodyType" min={0} value={bodyType}
+                            onChange={(e) => setBodyType(e.target.value)}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                        />
+                    </label>
+
+                    {connection.loading && <p className="text-center mt-6 text-gray-500">Checking Garmin connection…</p>}
+
+                    {!connection.loading && connection.connected && (
+                        <div className="mt-6 text-center">
+                            <p>✅ Garmin connected as <strong>{connection.email}</strong></p>
+                            <a href="#" className="underline text-sm" onClick={(e) => { e.preventDefault(); disconnect(); }}>
+                                Disconnect / use a different account
+                            </a>
+                        </div>
+                    )}
+
+                    {!connection.loading && !connection.connected && (
+                        <>
+                            <label className="block mt-6">
+                                <span className="text-gray-700">Garmin Email address</span>
+                                <input
+                                    type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                    placeholder="john@example.com"
+                                />
+                            </label>
+                            <label className="block mt-2">
+                                <span className="text-gray-700">Garmin Password</span>
+                                <input
+                                    type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                    placeholder="********"
+                                />
+                            </label>
+                            <p className="text-xs text-gray-500 mt-1">Garmin&apos;s API does not support 2FA — disable it on your Garmin account first.</p>
+                            <div className="mt-2">
+                                <input type="checkbox" id="rememberCredentials" checked={rememberCredentials}
+                                    onChange={(e) => setRememberCredentials(e.target.checked)} />
+                                <label htmlFor="rememberCredentials" className="ml-2">
+                                    Remember this connection (auto-sync next time, only the scale scan needed)
+                                </label>
+                            </div>
+                        </>
+                    )}
+
+                    {showMFACode && (
+                        <label className="block mt-4">
+                            <span className="text-gray-700">MFA Code</span>
+                            <input
+                                type="text" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} required
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                placeholder="123456"
+                            />
+                        </label>
+                    )}
+
+                    <div className='flex flex-wrap'>
+                        <Link href="/" passHref>
+                            <button type="button" className='bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded mt-5 mr-auto'>
+                                &lt; Back
+                            </button>
+                        </Link>
+                        <button type="submit" disabled={isSubmitting || connection.loading}
+                            className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-5 ml-auto disabled:opacity-50'>
+                            {isSubmitting ? 'Sending…' : 'Send to Garmin Connect'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     )
 }

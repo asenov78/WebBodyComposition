@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  garminCredential GarminCredential?
+  measurements     Measurement[]
+}
+
+// Garmin login + reusable OAuth1 token, encrypted at rest (AES-256-GCM).
+// Each *Enc field stores "iv:authTag:ciphertext" as produced by lib/encryption.js.
+model GarminCredential {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  emailEnc      String
+  passwordEnc   String
+  accessTokenEnc String?
+  tokenSecretEnc String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// Historical log of what got pushed to Garmin, so the UI can show "last synced" etc.
+model Measurement {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  weight           Float
+  bmi              Float?
+  fat              Float?
+  muscleMass       Float?
+  waterPercentage  Float?
+  boneMass         Float?
+  visceralFat      Float?
+  metabolicAge     Float?
+  bodyType         Float?
+
+  syncedToGarmin   Boolean  @default(false)
+  createdAt        DateTime @default(now())
+}
