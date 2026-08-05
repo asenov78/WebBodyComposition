@@ -16,8 +16,8 @@ const MAX_TIME_BUDGET_MS = 8000;
 // First call must include email/password (to establish/refresh the connection); once
 // GarminCredential has a saved OAuth token, later calls need nothing else.
 export default async function handler(req, res) {
-    if (req.method !== 'POST') {
-        res.setHeader('Allow', ['POST']);
+    if (!['GET', 'POST'].includes(req.method)) {
+        res.setHeader('Allow', ['GET', 'POST']);
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
@@ -26,6 +26,17 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: 'Not authenticated.' });
     }
     const userId = session.user.id;
+
+    // Read-only status check — no side effects — so the page can show progress
+    // immediately on load/refresh instead of only after clicking "Sync Next Batch".
+    if (req.method === 'GET') {
+        const [totalMeasurements, syncedCount, remaining] = await Promise.all([
+            prisma.measurement.count({ where: { userId } }),
+            prisma.measurement.count({ where: { userId, syncedToGarmin: true } }),
+            prisma.measurement.count({ where: { userId, syncedToGarmin: false } }),
+        ]);
+        return res.status(200).json({ totalMeasurements, synced: syncedCount, remaining });
+    }
 
     const { email, password, mfaCode, clientId, limit } = req.body ?? {};
     const batchSize = Number.isFinite(Number(limit)) && Number(limit) > 0 ? Math.floor(Number(limit)) : 5;
@@ -51,6 +62,13 @@ export default async function handler(req, res) {
             // platform killing the function outright. Whatever's left is still
             // "pending" in the DB, so the client can just call again.
             break;
+        }
+
+        // A fast burst of requests appears to get the proxy/Garmin throttling us (hung
+        // connections with zero response after ~17 rapid uploads). A small gap between
+        // requests is cheap insurance against that.
+        if (i > 0) {
+            await new Promise((resolve) => setTimeout(resolve, 400));
         }
 
         const measurement = batch[i];

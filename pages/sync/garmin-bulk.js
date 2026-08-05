@@ -18,6 +18,14 @@ export default function GarminBulkSync() {
     // dates, then bump this up and keep going — instead of firing hundreds of
     // requests in one go (which used to time out with no useful error).
     const [batchSize, setBatchSize] = useState(2);
+    // Overall progress (total/synced/remaining across ALL batches so far, not just this
+    // page session) — fetched on load so refreshing doesn't lose sight of where you are.
+    const [progress, setProgress] = useState({ loading: true, totalMeasurements: 0, synced: 0, remaining: 0 });
+
+    const loadProgress = () => fetch('/api/sync/garmin/bulk')
+        .then((r) => r.json())
+        .then((data) => setProgress({ loading: false, ...data }))
+        .catch(() => setProgress((p) => ({ ...p, loading: false })));
 
     useEffect(() => {
         if (authStatus !== 'authenticated') return;
@@ -25,6 +33,8 @@ export default function GarminBulkSync() {
             .then((r) => r.json())
             .then((data) => setConnection({ loading: false, ...data }))
             .catch(() => setConnection({ loading: false, connected: false }));
+        loadProgress();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [authStatus]);
 
     const runSync = async (event) => {
@@ -59,6 +69,7 @@ export default function GarminBulkSync() {
             if (data.synced > 0) {
                 setConnection((c) => ({ ...c, connected: true, email: email || c.email }));
             }
+            loadProgress();
         } catch (err) {
             console.log(err);
             setResult({ error: `Network/client error: ${err?.message || err}` });
@@ -78,7 +89,10 @@ export default function GarminBulkSync() {
         );
     }
 
-    const remaining = result?.remaining ?? result?.totalPending ?? null;
+    // Prefer the just-returned batch result while it's fresh, otherwise fall back to
+    // the persisted /api/sync/garmin/bulk GET so a page refresh still shows where
+    // things stand instead of going blank.
+    const remaining = result?.remaining ?? result?.totalPending ?? (progress.loading ? null : progress.remaining);
 
     return (
         <div className='flex flex-wrap'>
@@ -87,6 +101,15 @@ export default function GarminBulkSync() {
                 <p className='text-center text-gray-600 mb-6'>
                     Pushes measurements imported from Xiaomi Cloud, a small batch at a time, using each one&apos;s real weigh-in date.
                 </p>
+
+                {progress.loading ? (
+                    <p className='text-center text-gray-500 mb-4'>Loading progress…</p>
+                ) : (
+                    <div className='text-center mb-6 rounded-xl border border-gray-200 bg-gray-50 p-3'>
+                        <p className='font-semibold'>{progress.synced} / {progress.totalMeasurements} synced to Garmin</p>
+                        <p className='text-sm text-gray-600'>{progress.remaining} still pending</p>
+                    </div>
+                )}
 
                 <form onSubmit={runSync}>
                     {connection.loading && <p className='text-center text-gray-500'>Checking Garmin connection…</p>}
