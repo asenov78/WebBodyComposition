@@ -1,23 +1,23 @@
 # TODO
 
-## Password reset email doesn't deliver — blocked on a decision
+## Password reset email — DONE (Gmail SMTP, not Resend)
 
-Feature is fully built (`/forgot-password`, `/reset-password`,
-`PasswordResetToken` model, `lib/passwordReset.js`, `lib/email.js`,
-25/25... 37/37 tests pass) and `RESEND_API_KEY` is set in Vercel — but
-sending fails: `"Domain is not verified: The domain used to send this
-email needs to be verified."` Resend requires a verified domain even for
-its own `onboarding@resend.dev` sender on this account, and this project
-has no custom domain (only the `*.vercel.app` one).
+Resend needed a verified custom domain even for its own
+`onboarding@resend.dev` sender on this account, and this project has no
+domain (didn't want to reuse apsbg.com's — separate project). Switched
+`lib/email.js` to Gmail SMTP via Nodemailer (`GMAIL_USER` +
+`GMAIL_APP_PASSWORD` — a Google App Password, not the real account
+password) — no domain needed, authenticates through Google's own
+servers so it doesn't hit the DMARC problem a third-party "verify
+gmail.com as sender identity" setup would.
 
-Options put to the user, decision pending ("ще го мисля"):
-1. Gmail SMTP via Nodemailer + a Google App Password on `asenov78@gmail.com`
-   — no domain needed, works immediately.
-2. Verify a subdomain of an existing domain the user already controls
-   (apsbg.com, invoicealert.app, dravion...) in Resend.
-3. Buy a small domain just for this project.
+Live-tested against prod: `POST /api/auth/forgot-password` → `200`, no
+error logged. `RESEND_API_KEY` removed from Vercel, `resend` package
+uninstalled.
 
-Don't touch this again until the user picks a direction.
+Known limitation, accepted: Gmail's regular sending caps (~500/day) —
+irrelevant at this app's actual volume (occasional password resets for
+one user).
 
 ## Run /cso and /improve-codebase-architecture over the whole project
 
