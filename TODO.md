@@ -2,10 +2,7 @@
 
 ## Self-hosted replacement for third-party proxies (goal: everything runs on our own infra)
 
-Currently two external services are load-bearing:
-
-- **Garmin upload** — `https://frog01-20364.wykr.es/upload` (author's hosted proxy)
-  — **investigated, blocked by an upstream bug, not switched over. See below.**
+- **Garmin upload** — **DONE, switched over.** See below.
 - **Xiaomi Cloud login + weights fetch** — `https://grzegorz366-20366.wykr.es`
   - Still not attempted. Harder: reverse-engineered, undocumented QR-code SSO
     login protocol, no known open-source implementation found (checked
@@ -13,6 +10,53 @@ Currently two external services are load-bearing:
     not the Xiaomi Cloud account API, so it doesn't transfer). Self-hosting
     this means reverse engineering Xiaomi's login/signing flow ourselves.
     Higher risk (Xiaomi can change the protocol without notice) and effort.
+
+### Garmin: self-hosted proxy is live in production — DONE
+
+`GARMIN_PROXY_URL` in Vercel production now points at
+`https://linux-bot.tail8b795f.ts.net/upload` — our own patched
+build of YAGCC, running on `linux-bot`. `frog01-20364.wykr.es` (the
+original third-party proxy) is no longer used.
+
+**Root cause of the blocker** (issue #15) traced all the way through the
+source (`gh api`, not summaries): `TryToAuthenticate()` in `Client.cs`
+calls the real Garmin SSO login. When that login throws instead of
+cleanly returning `IsSuccess: false`, the `catch` block never sets
+`result.ErrorLogs` (no default initializer, stays `null`), so
+`UploadEndpoints.cs`'s `uploadResult.ErrorLogs.LastOrDefault()` crashes —
+the null-check bug was just hiding a transient Garmin-login exception,
+not a permanent block.
+
+**Fix** (patched in our own build, not upstream yet): in both `catch`
+blocks of `TryToAuthenticate()`, set `result.ErrorLogs` to the real
+exception message before returning; in `UploadEndpoints.cs`, use
+`uploadResult.ErrorLogs?.LastOrDefault()` (null-safe) as a second layer.
+Rebuilt the Docker image on `linux-bot` from patched source
+(`docker build -f src/Api/Dockerfile`), swapped it in on the same port
+(`yagcc-patched`, `--restart unless-stopped` so it survives reboots/
+crashes), re-ran the same real-credentials test that used to crash —
+**4/4 real uploads succeeded** across two test runs. Whatever was
+throwing inside `Authenticate()` is transient (matches the maintainer's
+recent "multi flow auth" / "extended random delays" commits) — retrying
+just works.
+
+Posted the root-cause + fix as a
+[comment on issue #15](https://github.com/lswiderski/yet-another-garmin-connect-client/issues/15#issuecomment-5203533022)
+upstream, offered to open a PR.
+
+**Known operational risk, accepted for now**: `ClientFactory.Create()`
+fetches OAuth consumer keys from
+`github.com/.../raw/main/oauth_consumer.json` on every request with no
+persistent cache (separately confirmed via issue #13) — under real load
+this could hit GitHub 429s. Personal-scale traffic (a handful of syncs
+every few minutes) is unlikely to trip it, but if Garmin syncs start
+failing with a GitHub-rate-limit-shaped error, this is the first thing to
+check. Also: `linux-bot` is a single laptop — if it's down, Garmin sync
+just fails until it's back (same single-point-of-failure tradeoff as
+before, no change).
+
+<details>
+<summary>Original investigation (superseded, kept for context)</summary>
 
 ### Garmin: found the real thing, it has a blocking bug
 
@@ -122,7 +166,9 @@ surface as a Flurl exception message, not this one).
    through all of this — same "isolated test, don't touch what works"
    discipline as the first YAGCC investigation.
 
-Not started — this is the plan, pending a go-ahead to actually patch/build.
+This plan was executed — see the DONE summary above.
+
+</details>
 
 ## Design audit vs bulma.io/documentation/elements — DONE
 
