@@ -17,3 +17,14 @@ html, body, #__next {
 .app-main {
     flex: 1 1 auto;
 }
+
+/* pages/login.js: the two .columns sit stacked (login form first) below Bulma's
+   $desktop breakpoint, side by side above it. No documented Bulma helper does
+   "reorder only past a breakpoint" (checked — is-flex-direction-row-reverse has
+   no responsive variants), so this one rule is a deliberate exception rather
+   than something already provided. */
+@media screen and (min-width: 1024px) {
+    .login-info-column {
+        order: -1;
+    }
+}
