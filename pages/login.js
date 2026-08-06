@@ -51,9 +51,16 @@ export default function LoginPage() {
         // no extra markup needed. On desktop the two columns sit side by side;
         // .login-info-column's order:-1 (globals.css, min-width:1024px) moves the
         // info panel to the visual left without reordering the DOM.
-        <div className='columns is-centered is-vcentered'>
+        <div className='columns is-centered'>
             <div className='column is-narrow' style={{ width: '24rem' }}>
-                <h1 className='title is-4 has-text-centered'>Log In</h1>
+                {/* Matches the info column's hero below (same is-small hero) so
+                    both columns start with the same visual weight instead of a
+                    plain heading next to a colored banner. */}
+                <section className='hero is-primary is-small is-radiusless block' style={{ borderRadius: '6px' }}>
+                    <div className='hero-body'>
+                        <p className='title is-5 has-text-centered'>Log In</p>
+                    </div>
+                </section>
                 <div className='box'>
                     <form onSubmit={handleSubmit}>
                         <div className='field'>
@@ -118,28 +125,14 @@ export default function LoginPage() {
 
                 {/* Same box+chart the real dashboard uses (pages/index.js), fed sample
                     data — a plausible trend line explains "what this tracks" faster
-                    than another paragraph, before there's any real data to show. */}
+                    than another paragraph, before there's any real data to show.
+                    Kept short on purpose — matches the login box's height instead
+                    of towering over it. */}
                 <div className='box mb-0'>
-                    <div className='level is-mobile mb-2'>
-                        <div className='level-left'>
-                            <div className='level-item'>
-                                <p className='has-text-weight-semibold is-size-7'>Your weight, synced automatically</p>
-                            </div>
-                        </div>
-                        <div className='level-right'>
-                            <div className='level-item'>
-                                <span className='tag is-light is-small'>Sample data</span>
-                            </div>
-                        </div>
-                    </div>
                     <WeightChart series={SAMPLE_SERIES} />
-                    <div className='content is-size-7 mt-3 mb-0'>
-                        <ul>
-                            <li>Connect once — Xiaomi Cloud and Garmin stay linked to your account.</li>
-                            <li>New weigh-ins sync in the background, with the real date — not &quot;today&quot;.</li>
-                            <li>Credentials are encrypted and stored server-side, not in your browser.</li>
-                        </ul>
-                    </div>
+                    <p className='has-text-centered is-size-7 has-text-grey mt-3 mb-0'>
+                        Sample data — connect once, syncs automatically after that.
+                    </p>
                 </div>
             </div>
         </div>
