@@ -50,8 +50,13 @@ export default function XiaomiCloud() {
     const [qrCodeBase64, setQrCodeBase64] = useState('');
     const [pollingEndpoint, setPollingEndpoint] = useState('');
     const [weightRecords, setWeightRecords] = useState([]);
+    const [fetchSummary, setFetchSummary] = useState(null);
     const [isLoadingConnection, setIsLoadingConnection] = useState(true);
     const [isSavedServerSide, setIsSavedServerSide] = useState(false);
+    // Once connected, the userId/passToken/region/model fields are irrelevant day-to-day
+    // (they're saved server-side already) — tucked behind this toggle instead of always
+    // taking up the top of the page.
+    const [showConnectionDetails, setShowConnectionDetails] = useState(false);
     const loginPollingControllerRef = useRef(null);
 
     const isGetMeasurementsEnabled = userId.trim() !== '' && passToken.trim() !== '';
@@ -94,6 +99,7 @@ export default function XiaomiCloud() {
         setUserId('');
         setPassToken('');
         setIsSavedServerSide(false);
+        setShowConnectionDetails(false);
     };
 
     const sleep = (delayMs, signal) => new Promise((resolve, reject) => {
@@ -172,6 +178,7 @@ export default function XiaomiCloud() {
         setIsSubmitting(true);
         setMessage('');
         setWeightRecords([]);
+        setFetchSummary(null);
 
         try {
             const response = await fetch(weightEndpoint, {
@@ -197,8 +204,6 @@ export default function XiaomiCloud() {
                 .slice()
                 .sort((left, right) => new Date(right.date) - new Date(left.date));
 
-            setWeightRecords(allRecords);
-
             if (allRecords.length > 0) {
                 const importRes = await fetch('/api/measurements/import', {
                     method: 'POST',
@@ -206,9 +211,20 @@ export default function XiaomiCloud() {
                     body: JSON.stringify({ records: allRecords }),
                 });
                 const importData = await importRes.json();
-                setMessage(importRes.ok
-                    ? `Loaded ${allRecords.length} record${allRecords.length === 1 ? '' : 's'}: ${importData.imported} new, ${importData.duplicates} already saved.`
-                    : `Loaded ${allRecords.length} record${allRecords.length === 1 ? '' : 's'}, but saving them failed.`);
+
+                if (importRes.ok) {
+                    // Show only what's actually new — Xiaomi Cloud always returns the
+                    // full history, and re-listing rows already saved from a previous
+                    // fetch was just noise.
+                    const newRecords = (importData.newRecords || [])
+                        .slice()
+                        .sort((left, right) => new Date(right.date) - new Date(left.date));
+                    setWeightRecords(newRecords);
+                    setFetchSummary({ total: allRecords.length, imported: importData.imported, duplicates: importData.duplicates });
+                    setMessage('');
+                } else {
+                    setMessage(`Fetched ${allRecords.length} record${allRecords.length === 1 ? '' : 's'} from Xiaomi Cloud, but saving them failed.`);
+                }
             } else {
                 setMessage(responseText || 'Measurements request sent successfully.');
             }
@@ -392,228 +408,284 @@ export default function XiaomiCloud() {
         { key: 'height', label: 'Height (cm)' },
     ];
 
+    const fieldInputClass = 'mt-1 block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50';
+    const showDetailFields = !isSavedServerSide || showConnectionDetails;
+
     return (
-        <>
-            <div className='flex flex-wrap'>
-                <div className='w-full max-w-7xl px-4 ml-auto mr-auto'>
+        <div className='max-w-3xl mx-auto px-4'>
+            <div className='text-center mt-6 mb-8'>
+                <h1 className='text-3xl font-bold'>Mi Cloud Connector</h1>
+                <p className='text-gray-500 mt-1'>S400 scale → Xiaomi Cloud → this app.</p>
+            </div>
 
-                    <h1 className='text-2xl font-bold text-center mb-5'>Mi Cloud Connector</h1>
+            {isLoadingConnection && (
+                <p className='text-center text-gray-500 mt-4'>Checking saved connection…</p>
+            )}
 
-                    {isLoadingConnection && (
-                        <p className='text-center text-gray-500 mt-4'>Checking saved connection…</p>
-                    )}
-
-                    {!isLoadingConnection && isSavedServerSide && !isPollingPassToken && (
-                        <div className='text-center mt-4 mb-6'>
-                            <p>✅ Connected to Xiaomi Cloud (User ID {userId})</p>
-                            <a href='#' className='underline text-sm' onClick={(e) => { e.preventDefault(); disconnectXiaomi(); }}>
-                                Disconnect / use a different account
-                            </a>
-                        </div>
-                    )}
-
-                    {!isPollingPassToken ? (
-                        <form id='xiaomi-cloud-form' onSubmit={submitMeasurements} className='space-y-4 mt-10'>
-                            <label className='block'>
-                                <span className='text-gray-700'>User ID</span>
-                                <input
-                                    type='number'
-                                    name='userId'
-                                    value={userId}
-                                    onChange={(e) => setUserId(e.target.value)}
-                                    className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50'
-                                    placeholder='123456789'
-                                />
-                            </label>
-
-                            <label className='block'>
-                                <span className='text-gray-700'>Pass Token</span>
-                                <textarea
-                                    name='passToken'
-                                    rows={4}
-                                    value={passToken}
-                                    onChange={(e) => setPassToken(e.target.value)}
-                                    className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50'
-                                    placeholder='Paste pass token here'
-                                />
-                            </label>
-
+            {/* One form for the whole connect/fetch flow — the "Get Measurements" button
+                stays inside it (not a detached form= reference) so it keeps working
+                whether or not the detail fields below are expanded. */}
+            {!isLoadingConnection && !isPollingPassToken && (
+                <form onSubmit={submitMeasurements} className='rounded-2xl border border-gray-200 shadow-sm bg-white p-5 mb-6 space-y-4'>
+                    {isSavedServerSide && (
+                        <div className='flex items-center justify-between flex-wrap gap-3'>
                             <div>
-                                <button
-                                    type='button'
-                                    onClick={getPassToken}
-                                    disabled={isGettingPassToken || isSubmitting}
-                                    className='bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-bold py-2 px-4 rounded'
-                                >
-                                    {isGettingPassToken ? 'Getting pass token...' : 'Get Pass Token'}
-                                </button>
+                                <h2 className='font-semibold text-gray-700'>✅ Connected to Xiaomi Cloud</h2>
+                                <p className='text-sm text-gray-500 mt-1'>Account-wide — works from any device, no need to reconnect.</p>
                             </div>
-
-                            <label className='block'>
-                                <span className='text-gray-700'>Account region</span>
-                                <select
-                                    name='region'
-                                    value={region}
-                                    onChange={(e) => setRegion(e.target.value)}
-                                    className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50'
-                                >
-                                    {regionOptions.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                            {option.value} - {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-
-                            <label className='block'>
-                                <span className='text-gray-700'>Scale model</span>
-                                <select
-                                    name='model'
-                                    value={model}
-                                    onChange={(e) => setModel(e.target.value)}
-                                    className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50'
-                                >
-                                    {!modelOptions.some((option) => option.value === model) && model && (
-                                        <option value={model}>
-                                            {model} (saved)
-                                        </option>
-                                    )}
-                                    {modelOptions.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-
-                            {message && (
-                                <div className='text-sm text-center text-gray-700 whitespace-pre-wrap'>
-                                    {message}
-                                </div>
-                            )}
-                        </form>
-                    ) : (
-                        <div className='mt-10 space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-4'>
-                            <div className='flex items-center justify-between gap-4'>
-                                <div>
-                                    <h2 className='text-lg font-semibold text-gray-900'>Waiting for Xiaomi login</h2>
-                                    <p className='text-sm text-gray-600'>Scan the QR code or open the login link, then wait for polling to finish.</p>
-                                </div>
-                            </div>
-
-                            {loginSessionId && (
-                                <div className='text-xs text-gray-500'>Session ID: {loginSessionId}</div>
-                            )}
-                            {qrCodeBase64 && (
-                                <div className='flex justify-center'>
-                                    <img
-                                        src={`data:image/png;base64,${qrCodeBase64}`}
-                                        alt='Xiaomi login QR code'
-                                        className='max-w-full rounded-lg border border-gray-200 bg-white p-2'
-                                    />
-                                </div>
-                            )}
-                            {loginUrl && (
-                                <div className='break-all text-center text-sm'>
-                                    <a
-                                        href={loginUrl}
-                                        target='_blank'
-                                        rel='noreferrer'
-                                        className='font-semibold text-blue-700 underline'
-                                    >
-                                        {loginUrl}
-                                    </a>
-                                </div>
-                            )}
-                            {pollingEndpoint && (
-                                <div className='text-xs text-gray-500'>Polling endpoint: {pollingEndpoint}</div>
-                            )}
-                            <div className='text-sm text-center text-gray-700 whitespace-pre-wrap'>
-                                {message || 'Polling for pass token...'}
-                            </div>
-                        </div>
-                    )}
-
-                    {weightRecords.length > 0 && (
-                        <div className='mt-10 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm'>
-                            <div className='overflow-x-auto'>
-                                <table className='min-w-full divide-y divide-gray-200 text-sm'>
-                                    <thead className='bg-gray-50'>
-                                        <tr>
-                                            <th className='px-4 py-3 text-left font-semibold text-gray-700'>Date</th>
-                                            {metricFields.map((field) => (
-                                                <th key={field.key} className='px-4 py-3 text-left font-semibold text-gray-700'>
-                                                    {field.label}
-                                                </th>
-                                            ))}
-
-                                        </tr>
-                                    </thead>
-                                    <tbody className='divide-y divide-gray-100 bg-white'>
-                                        {weightRecords.map((record, index) => (
-                                            <tr key={`${record.date || 'record'}-${index}`} className='hover:bg-gray-50'>
-                                                <td className='whitespace-nowrap px-4 py-3 font-medium text-gray-900'>
-                                                    {formatDate(record.date)}
-                                                </td>
-                                                {metricFields.map((field) => (
-                                                    <td key={field.key} className='whitespace-nowrap px-4 py-3 text-gray-700'>
-                                                        {formatValue(record[field.key])}
-                                                    </td>
-                                                ))}
-
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-
-                    {weightRecords.length === 0 && message && !isSubmitting && (
-                        <div className='mt-10 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500'>
-                            No parsed records to display yet. Please get measurements first.
-                        </div>
-                    )}
-
-                    <div className='flex flex-wrap mt-10'>
-                        <Link href="/" passHref className='mr-auto'>
                             <button
-                                type="button"
-                                className='bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded mt-5'
-                            >  &lt; Back
+                                type='submit'
+                                disabled={!isGetMeasurementsEnabled || isSubmitting}
+                                className='bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold text-sm py-2 px-4 rounded-lg whitespace-nowrap'
+                            >
+                                {isSubmitting ? 'Checking…' : 'Get Measurements'}
                             </button>
-                        </Link>
+                        </div>
+                    )}
 
-                        {isPollingPassToken ? (
+                    {isSavedServerSide && (
+                        <div className='flex items-center gap-4'>
                             <button
                                 type='button'
-                                onClick={cancelPassTokenPolling}
-                                className='bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-5 ml-3'
+                                onClick={() => setShowConnectionDetails((v) => !v)}
+                                className='text-xs text-gray-400 hover:text-gray-600 underline'
                             >
-                                Cancel Login
+                                {showConnectionDetails ? 'Hide' : 'Show'} connection details
                             </button>
-                        ) : weightRecords.length > 0 ? (
-                            <Link href="/sync/garmin-bulk" passHref className='ml-auto'>
-                                <button
-                                    type='button'
-                                    className='bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded mt-5'
-                                >
-                                    Continue → Connect to Garmin
-                                </button>
-                            </Link>
-                        ) : (
+                            {!showConnectionDetails && (
+                                <a href='#' className='text-xs text-gray-400 hover:text-red-500 underline' onClick={(e) => { e.preventDefault(); disconnectXiaomi(); }}>
+                                    Disconnect
+                                </a>
+                            )}
+                        </div>
+                    )}
+
+                    {showDetailFields && (
+                    <div className={`space-y-4 ${isSavedServerSide ? 'pt-4 border-t border-gray-100' : ''}`}>
+                    {!isSavedServerSide && (
+                        <p className='text-sm text-gray-500 -mt-1'>Connect once — scan the QR code below, and it&apos;s remembered on your account from then on.</p>
+                    )}
+
+                    <label className='block'>
+                        <span className='text-gray-700 text-sm font-medium'>User ID</span>
+                        <input
+                            type='number'
+                            name='userId'
+                            value={userId}
+                            onChange={(e) => setUserId(e.target.value)}
+                            className={fieldInputClass}
+                            placeholder='123456789'
+                        />
+                    </label>
+
+                    <label className='block'>
+                        <span className='text-gray-700 text-sm font-medium'>Pass Token</span>
+                        <textarea
+                            name='passToken'
+                            rows={3}
+                            value={passToken}
+                            onChange={(e) => setPassToken(e.target.value)}
+                            className={fieldInputClass}
+                            placeholder='Paste pass token here'
+                        />
+                    </label>
+
+                    <div className='flex items-center gap-3 flex-wrap'>
+                        <button
+                            type='button'
+                            onClick={getPassToken}
+                            disabled={isGettingPassToken || isSubmitting}
+                            className='bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-semibold text-sm py-2 px-4 rounded-lg'
+                        >
+                            {isGettingPassToken ? 'Getting pass token...' : 'Get Pass Token (QR login)'}
+                        </button>
+                        {isSavedServerSide && (
+                            <a href='#' className='text-xs text-gray-400 hover:text-red-500 underline' onClick={(e) => { e.preventDefault(); disconnectXiaomi(); }}>
+                                Disconnect / use a different account
+                            </a>
+                        )}
+                    </div>
+
+                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                        <label className='block'>
+                            <span className='text-gray-700 text-sm font-medium'>Account region</span>
+                            <select
+                                name='region'
+                                value={region}
+                                onChange={(e) => setRegion(e.target.value)}
+                                className={fieldInputClass}
+                            >
+                                {regionOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.value} - {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+
+                        <label className='block'>
+                            <span className='text-gray-700 text-sm font-medium'>Scale model</span>
+                            <select
+                                name='model'
+                                value={model}
+                                onChange={(e) => setModel(e.target.value)}
+                                className={fieldInputClass}
+                            >
+                                {!modelOptions.some((option) => option.value === model) && model && (
+                                    <option value={model}>
+                                        {model} (saved)
+                                    </option>
+                                )}
+                                {modelOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                    </div>
+
+                    {!isSavedServerSide && (
+                        <div className='pt-2'>
                             <button
-                                form='xiaomi-cloud-form'
                                 type='submit'
                                 disabled={!isGetMeasurementsEnabled || isSubmitting || isGettingPassToken}
-                                className='bg-blue-500 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-2 px-4 rounded mt-5 ml-auto'
+                                className='bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold text-sm py-2 px-4 rounded-lg'
                             >
                                 {isSubmitting ? 'Getting measurements...' : 'Get Measurements'}
                             </button>
-                        )}
+                        </div>
+                    )}
+                    </div>
+                    )}
 
+                    {message && (
+                        <div className='text-sm text-gray-700 whitespace-pre-wrap'>
+                            {message}
+                        </div>
+                    )}
+                </form>
+            )}
+
+            {isPollingPassToken && (
+                <div className='rounded-2xl border border-gray-200 shadow-sm bg-white p-5 mb-6 space-y-4'>
+                    <div>
+                        <h2 className='font-semibold text-gray-700'>Waiting for Xiaomi login</h2>
+                        <p className='text-sm text-gray-500 mt-1'>Scan the QR code or open the login link, then wait for polling to finish.</p>
+                    </div>
+
+                    {loginSessionId && (
+                        <div className='text-xs text-gray-400'>Session ID: {loginSessionId}</div>
+                    )}
+                    {qrCodeBase64 && (
+                        <div className='flex justify-center'>
+                            <img
+                                src={`data:image/png;base64,${qrCodeBase64}`}
+                                alt='Xiaomi login QR code'
+                                className='max-w-full rounded-lg border border-gray-200 bg-white p-2'
+                            />
+                        </div>
+                    )}
+                    {loginUrl && (
+                        <div className='break-all text-center text-sm'>
+                            <a
+                                href={loginUrl}
+                                target='_blank'
+                                rel='noreferrer'
+                                className='font-semibold text-blue-700 underline'
+                            >
+                                {loginUrl}
+                            </a>
+                        </div>
+                    )}
+                    {pollingEndpoint && (
+                        <div className='text-xs text-gray-400'>Polling endpoint: {pollingEndpoint}</div>
+                    )}
+                    <div className='text-sm text-center text-gray-700 whitespace-pre-wrap'>
+                        {message || 'Polling for pass token...'}
+                    </div>
+                    <div className='text-center'>
+                        <button
+                            type='button'
+                            onClick={cancelPassTokenPolling}
+                            className='bg-red-600 hover:bg-red-700 text-white font-semibold text-sm py-2 px-4 rounded-lg'
+                        >
+                            Cancel Login
+                        </button>
                     </div>
                 </div>
+            )}
+
+            {fetchSummary && weightRecords.length === 0 && (
+                <div className='rounded-2xl bg-emerald-50 border border-emerald-100 px-4 py-4 mb-6 text-sm text-emerald-800 text-center'>
+                    ✅ You&apos;re all caught up — no new measurements ({fetchSummary.duplicates} of {fetchSummary.total} fetched were already saved).
+                </div>
+            )}
+
+            {weightRecords.length > 0 && (
+                <div className='mb-6'>
+                    <h2 className='font-semibold text-gray-700 mb-2'>
+                        🎉 {weightRecords.length} new measurement{weightRecords.length === 1 ? '' : 's'}
+                        {fetchSummary && (
+                            <span className='font-normal text-gray-400 text-sm ml-2'>
+                                ({fetchSummary.duplicates} of {fetchSummary.total} fetched were already saved)
+                            </span>
+                        )}
+                    </h2>
+                    <div className='overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm'>
+                        <div className='overflow-x-auto'>
+                            <table className='min-w-full divide-y divide-gray-200 text-sm'>
+                                <thead className='bg-gray-50'>
+                                    <tr>
+                                        <th className='px-4 py-2.5 text-left text-gray-500 font-medium whitespace-nowrap'>Date</th>
+                                        {metricFields.map((field) => (
+                                            <th key={field.key} className='px-4 py-2.5 text-left text-gray-500 font-medium whitespace-nowrap'>
+                                                {field.label}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className='divide-y divide-gray-100 bg-white'>
+                                    {weightRecords.map((record, index) => (
+                                        <tr key={`${record.date || 'record'}-${index}`} className='hover:bg-gray-50'>
+                                            <td className='whitespace-nowrap px-4 py-2.5 font-medium text-gray-900'>
+                                                {formatDate(record.date)}
+                                            </td>
+                                            {metricFields.map((field) => (
+                                                <td key={field.key} className='whitespace-nowrap px-4 py-2.5 text-gray-700'>
+                                                    {formatValue(record[field.key])}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div className='flex flex-wrap items-center gap-3 mb-10'>
+                <Link href='/' passHref>
+                    <button
+                        type='button'
+                        className='bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-sm py-2 px-4 rounded-lg'
+                    >
+                        &lt; Back
+                    </button>
+                </Link>
+
+                {fetchSummary && !isPollingPassToken && (
+                    <Link href='/sync/garmin-bulk' passHref className='ml-auto'>
+                        <button
+                            type='button'
+                            className='bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm py-2 px-4 rounded-lg'
+                        >
+                            Continue → Connect to Garmin
+                        </button>
+                    </Link>
+                )}
             </div>
-        </>)
+        </div>
+    )
 }

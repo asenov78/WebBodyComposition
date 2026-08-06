@@ -51,6 +51,35 @@ infrastructure is ready, just not flipped on. Revisit if the upstream issue
 gets fixed, or consider patching it ourselves (would need a .NET toolchain)
 if this becomes worth the effort.
 
+Instance metadata (`GET /` on the linux-bot deployment), for reference —
+confirms the version we tested and that it also exposes a blood-pressure
+upload endpoint we haven't looked at (not needed for this app, S400 is
+weight/composition only):
+```json
+{"name":"yet-another-garmin-connect-client-api","projectUrl":"https://github.com/lswiderski/yet-another-garmin-connect-client","uploadBodyCompositiontEndpoint":"/upload","uploadBloodPressureEndpoint":"/uploadbloodpressure","version":"0.0.14.0"}
+```
+Watch [issue #15](https://github.com/lswiderski/yet-another-garmin-connect-client/issues/15)
+— when it's closed upstream, bump the Docker image on linux-bot, re-run the
+same real-credentials test, and flip `GARMIN_PROXY_URL` in Vercel prod if it
+passes.
+
+## Design: evaluate Bulma instead of ad-hoc Tailwind utility classes
+
+User likes [bulma.io](https://bulma.io)'s look. Current UI is Tailwind
+utility classes, hand-styled per page (no design system/component library) —
+`pages/index.js`, `pages/cloud/xiaomiCloud.js`, `pages/sync/garmin-bulk.js`,
+`pages/login.js`, `pages/register.js`. Not started — would touch every page,
+so worth a proper before/after look first rather than converting mid-flight.
+Options to weigh once we get to it:
+- Full swap to Bulma (drop Tailwind, adopt Bulma's classes + SCSS variables
+  for theming) — biggest rewrite, most consistent result.
+- Keep Tailwind, just crib Bulma's visual language (card/button/tag styling,
+  spacing scale) into the existing Tailwind classes — smaller diff, no new
+  dependency, but manual upkeep instead of a real design system.
+- Tailwind + a component layer inspired by Bulma's primitives (buttons,
+  cards, notifications) as shared React components in `components/` — middle
+  ground, reusable, still Tailwind under the hood.
+
 ### Reliability fix that came out of this: cron scheduling
 
 GitHub Actions' `schedule` trigger (`*/10 * * * *`) turned out to fire far
