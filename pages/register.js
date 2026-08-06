@@ -32,10 +32,14 @@ export default function Register() {
                 return;
             }
 
+            // callbackUrl explicit — see pages/login.js for why (defaults to the
+            // current page otherwise, landing back on /register after a
+            // successful auto-sign-in instead of the dashboard).
             const signInResult = await signIn('credentials', {
                 email,
                 password,
                 redirect: false,
+                callbackUrl: '/',
             });
 
             if (signInResult?.error) {

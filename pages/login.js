@@ -26,10 +26,16 @@ export default function LoginPage() {
         setError('');
         setIsSubmitting(true);
 
+        // callbackUrl must be explicit — next-auth's client signIn() otherwise
+        // defaults it to the current page URL (this /login page itself), so a
+        // successful login was landing back on /login instead of the dashboard.
+        // /login doesn't check "already authenticated -> redirect", so that
+        // looked identical to login silently failing.
         const result = await signIn('credentials', {
             email,
             password,
             redirect: false,
+            callbackUrl: '/',
         });
 
         setIsSubmitting(false);
