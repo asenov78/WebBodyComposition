@@ -1,5 +1,15 @@
 # TODO
 
+## Run /cso and /improve-codebase-architecture over the whole project
+
+Not started. User asked for both a security audit (`/cso`) and an
+architecture review (`/improve-codebase-architecture`) covering the full
+app — not just the areas touched this session (auth, encryption at rest,
+credential handling, the cron/self-hosted-proxy setup, Prisma schema).
+Worth doing now that the feature set (multi-user accounts, encrypted
+Garmin/Xiaomi credentials, password reset, self-hosted Garmin proxy) has
+settled rather than mid-churn.
+
 ## Self-hosted replacement for third-party proxies (goal: everything runs on our own infra)
 
 - **Garmin upload** — **DONE, switched over.** See below.
