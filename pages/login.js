@@ -97,6 +97,9 @@ export default function LoginPage() {
                         <p className="has-text-centered is-size-7">
                             No account yet? <Link href="/register">Register</Link>
                         </p>
+                        <p className="has-text-centered is-size-7 mt-1">
+                            <Link href="/forgot-password">Forgot password?</Link>
+                        </p>
                     </form>
                 </div>
             </div>

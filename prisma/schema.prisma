@@ -18,6 +18,23 @@ model User {
   garminCredential GarminCredential?
   xiaomiCredential XiaomiCredential?
   measurements     Measurement[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+// "Forgot password" flow. tokenHash is a SHA-256 hash of the token that's actually
+// emailed to the user — the raw token never touches the database, same principle as
+// a password hash, so a DB leak alone can't be used to reset anyone's account.
+// One-time use (usedAt) and short-lived (expiresAt) by design.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime  @default(now())
 }
 
 // Xiaomi Cloud login (userId + passToken from the QR-code SSO flow), encrypted at rest.
