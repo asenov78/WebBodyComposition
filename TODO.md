@@ -1,5 +1,24 @@
 # TODO
 
+## Password reset email doesn't deliver — blocked on a decision
+
+Feature is fully built (`/forgot-password`, `/reset-password`,
+`PasswordResetToken` model, `lib/passwordReset.js`, `lib/email.js`,
+25/25... 37/37 tests pass) and `RESEND_API_KEY` is set in Vercel — but
+sending fails: `"Domain is not verified: The domain used to send this
+email needs to be verified."` Resend requires a verified domain even for
+its own `onboarding@resend.dev` sender on this account, and this project
+has no custom domain (only the `*.vercel.app` one).
+
+Options put to the user, decision pending ("ще го мисля"):
+1. Gmail SMTP via Nodemailer + a Google App Password on `asenov78@gmail.com`
+   — no domain needed, works immediately.
+2. Verify a subdomain of an existing domain the user already controls
+   (apsbg.com, invoicealert.app, dravion...) in Resend.
+3. Buy a small domain just for this project.
+
+Don't touch this again until the user picks a direction.
+
 ## Run /cso and /improve-codebase-architecture over the whole project
 
 Not started. User asked for both a security audit (`/cso`) and an
