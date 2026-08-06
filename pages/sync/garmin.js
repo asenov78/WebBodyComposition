@@ -87,11 +87,11 @@ export default function Garmin() {
 
     if (authStatus === 'unauthenticated') {
         return (
-            <div className='flex flex-wrap'>
-                <div className='w-full max-w-sm ml-auto mr-auto text-center'>
-                    <h1 className='text-2xl font-bold mb-5'>Log in required</h1>
-                    <p className="mb-5">Create an account or log in to save your Garmin connection and sync automatically next time.</p>
-                    <Link href="/login" className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded'>Log In</Link>
+            <div className='columns is-centered'>
+                <div className='column is-narrow has-text-centered' style={{ width: '24rem' }}>
+                    <h1 className='title is-4'>Log in required</h1>
+                    <p className='mb-4'>Create an account or log in to save your Garmin connection and sync automatically next time.</p>
+                    <Link href="/login" className='button is-link'>Log In</Link>
                 </div>
             </div>
         );
@@ -109,94 +109,110 @@ export default function Garmin() {
     ];
 
     return (
-        <div className='flex flex-wrap'>
-            <div className='w-full max-w-sm ml-auto mr-auto'>
-                <h1 className='text-2xl font-bold text-center mb-5'>Garmin Body Composition Form</h1>
-                <form onSubmit={submitGarminForm}>
-                    <div className='grid grid-cols-2 gap-2'>
-                        {measurementFields.map(([label, value, setter, name]) => (
-                            <label className="block" key={name}>
-                                <span className="text-gray-700">{label}</span>
-                                <input
-                                    type="number" name={name} step="0.01" min={0} value={value}
-                                    onChange={(e) => setter(e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                                />
-                            </label>
-                        ))}
-                    </div>
-                    <label className="block mt-2">
-                        <span className="text-gray-700">Physique Rating</span>
-                        <input
-                            type="number" name="bodyType" min={0} value={bodyType}
-                            onChange={(e) => setBodyType(e.target.value)}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                        />
-                    </label>
-
-                    {connection.loading && <p className="text-center mt-6 text-gray-500">Checking Garmin connection…</p>}
-
-                    {!connection.loading && connection.connected && (
-                        <div className="mt-6 text-center">
-                            <p>✅ Garmin connected as <strong>{connection.email}</strong></p>
-                            <a href="#" className="underline text-sm" onClick={(e) => { e.preventDefault(); disconnect(); }}>
-                                Disconnect / use a different account
-                            </a>
+        <div className='columns is-centered'>
+            <div className='column is-narrow' style={{ width: '28rem' }}>
+                <h1 className='title is-4 has-text-centered'>Garmin Body Composition Form</h1>
+                <div className='box'>
+                    <form onSubmit={submitGarminForm}>
+                        <div className='columns is-multiline is-mobile'>
+                            {measurementFields.map(([label, value, setter, name]) => (
+                                <div className='column is-half' key={name}>
+                                    <div className='field'>
+                                        <label className='label is-small'>{label}</label>
+                                        <div className='control'>
+                                            <input
+                                                type="number" name={name} step="0.01" min={0} value={value}
+                                                onChange={(e) => setter(e.target.value)}
+                                                className="input"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    )}
-
-                    {!connection.loading && !connection.connected && (
-                        <>
-                            <label className="block mt-6">
-                                <span className="text-gray-700">Garmin Email address</span>
+                        <div className='field'>
+                            <label className='label is-small'>Physique Rating</label>
+                            <div className='control'>
                                 <input
-                                    type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                                    placeholder="john@example.com"
+                                    type="number" name="bodyType" min={0} value={bodyType}
+                                    onChange={(e) => setBodyType(e.target.value)}
+                                    className="input"
                                 />
-                            </label>
-                            <label className="block mt-2">
-                                <span className="text-gray-700">Garmin Password</span>
-                                <input
-                                    type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                                    placeholder="********"
-                                />
-                            </label>
-                            <p className="text-xs text-gray-500 mt-1">Garmin&apos;s API does not support 2FA — disable it on your Garmin account first.</p>
-                            <div className="mt-2">
-                                <input type="checkbox" id="rememberCredentials" checked={rememberCredentials}
-                                    onChange={(e) => setRememberCredentials(e.target.checked)} />
-                                <label htmlFor="rememberCredentials" className="ml-2">
-                                    Remember this connection (auto-sync next time, only the scale scan needed)
-                                </label>
                             </div>
-                        </>
-                    )}
+                        </div>
 
-                    {showMFACode && (
-                        <label className="block mt-4">
-                            <span className="text-gray-700">MFA Code</span>
-                            <input
-                                type="text" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} required
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                                placeholder="123456"
-                            />
-                        </label>
-                    )}
+                        {connection.loading && <p className="has-text-centered has-text-grey mt-4">Checking Garmin connection…</p>}
 
-                    <div className='flex flex-wrap'>
-                        <Link href="/" passHref>
-                            <button type="button" className='bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded mt-5 mr-auto'>
-                                &lt; Back
+                        {!connection.loading && connection.connected && (
+                            <div className="has-text-centered mt-4">
+                                <p>✅ Garmin connected as <strong>{connection.email}</strong></p>
+                                <a href="#" className="is-size-7" onClick={(e) => { e.preventDefault(); disconnect(); }}>
+                                    Disconnect / use a different account
+                                </a>
+                            </div>
+                        )}
+
+                        {!connection.loading && !connection.connected && (
+                            <>
+                                <div className='field mt-4'>
+                                    <label className='label is-small'>Garmin Email address</label>
+                                    <div className='control'>
+                                        <input
+                                            type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                                            className="input"
+                                            placeholder="john@example.com"
+                                        />
+                                    </div>
+                                </div>
+                                <div className='field'>
+                                    <label className='label is-small'>Garmin Password</label>
+                                    <div className='control'>
+                                        <input
+                                            type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
+                                            className="input"
+                                            placeholder="********"
+                                        />
+                                    </div>
+                                </div>
+                                <p className="help">Garmin&apos;s API does not support 2FA — disable it on your Garmin account first.</p>
+                                <div className='field mt-2'>
+                                    <div className='control'>
+                                        <label className='checkbox is-size-7'>
+                                            <input type="checkbox" checked={rememberCredentials}
+                                                onChange={(e) => setRememberCredentials(e.target.checked)} />
+                                            {' '}Remember this connection (auto-sync next time, only the scale scan needed)
+                                        </label>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {showMFACode && (
+                            <div className='field mt-4'>
+                                <label className='label is-small'>MFA Code</label>
+                                <div className='control'>
+                                    <input
+                                        type="text" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} required
+                                        className="input"
+                                        placeholder="123456"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className='is-flex is-align-items-center mt-5'>
+                            <Link href="/" passHref>
+                                <button type="button" className='button is-light mr-auto'>
+                                    &lt; Back
+                                </button>
+                            </Link>
+                            <button type="submit" disabled={isSubmitting || connection.loading}
+                                className='button is-link ml-auto'>
+                                {isSubmitting ? 'Sending…' : 'Send to Garmin Connect'}
                             </button>
-                        </Link>
-                        <button type="submit" disabled={isSubmitting || connection.loading}
-                            className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-5 ml-auto disabled:opacity-50'>
-                            {isSubmitting ? 'Sending…' : 'Send to Garmin Connect'}
-                        </button>
-                    </div>
-                </form>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     )

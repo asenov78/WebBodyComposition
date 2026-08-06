@@ -33,47 +33,56 @@ export default function LoginPage() {
     };
 
     return (
-        <div className='flex flex-wrap'>
-            <div className='w-full max-w-sm ml-auto mr-auto'>
-                <h1 className='text-2xl font-bold text-center mb-5'>Log In</h1>
-                <form onSubmit={handleSubmit}>
-                    <label className="block">
-                        <span className="text-gray-700">Email address</span>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                            placeholder="john@example.com"
-                        />
-                    </label>
-                    <label className="block mt-4">
-                        <span className="text-gray-700">Password</span>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                            placeholder="********"
-                        />
-                    </label>
+        <div className='columns is-centered'>
+            <div className='column is-narrow' style={{ width: '24rem' }}>
+                <h1 className='title is-4 has-text-centered'>Log In</h1>
+                <div className='box'>
+                    <form onSubmit={handleSubmit}>
+                        <div className='field'>
+                            <label className='label'>Email address</label>
+                            <div className='control'>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                    className="input"
+                                    placeholder="john@example.com"
+                                />
+                            </div>
+                        </div>
 
-                    {error && <p className="text-red-600 mt-3">{error}</p>}
+                        <div className='field'>
+                            <label className='label'>Password</label>
+                            <div className='control'>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    className="input"
+                                    placeholder="********"
+                                />
+                            </div>
+                        </div>
 
-                    <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-5 w-full disabled:opacity-50'
-                    >
-                        {isSubmitting ? 'Logging in…' : 'Log In'}
-                    </button>
+                        {error && <p className="help is-danger">{error}</p>}
 
-                    <p className="text-center mt-4">
-                        No account yet? <Link href="/register" className="underline">Register</Link>
-                    </p>
-                </form>
+                        <div className='field mt-5'>
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className='button is-primary is-fullwidth'
+                            >
+                                {isSubmitting ? 'Logging in…' : 'Log In'}
+                            </button>
+                        </div>
+
+                        <p className="has-text-centered is-size-7">
+                            No account yet? <Link href="/register">Register</Link>
+                        </p>
+                    </form>
+                </div>
             </div>
         </div>
     );

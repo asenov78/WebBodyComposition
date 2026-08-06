@@ -3,7 +3,7 @@
 export default function WeightChart({ series }) {
     if (!series || series.length < 2) {
         return (
-            <div className="flex items-center justify-center h-48 text-gray-400 text-sm rounded-xl border border-dashed border-gray-300">
+            <div className="has-text-centered has-text-grey is-size-7 py-6" style={{ border: '1px dashed #dbdbdb', borderRadius: '6px' }}>
                 Not enough synced data yet for a trend line (need at least 2 points).
             </div>
         );
@@ -43,23 +43,26 @@ export default function WeightChart({ series }) {
 
     const formatShortDate = (date) => new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' }).format(date);
 
+    const lineColor = '#485fc7'; // Bulma $link
+    const deltaColor = delta > 0 ? 'has-text-danger' : delta < 0 ? 'has-text-success' : 'has-text-grey';
+
     return (
         <div>
-            <div className="flex items-baseline justify-between mb-2">
+            <div className="is-flex is-align-items-baseline is-justify-content-space-between mb-2">
                 <div>
-                    <span className="text-2xl font-bold text-gray-900">{last.weight.toFixed(1)}</span>
-                    <span className="text-gray-500 text-sm ml-1">kg</span>
+                    <span className="title is-4 mb-0">{last.weight.toFixed(1)}</span>
+                    <span className="has-text-grey is-size-7 ml-1">kg</span>
                 </div>
-                <div className={`text-sm font-semibold ${delta > 0 ? 'text-red-500' : delta < 0 ? 'text-emerald-600' : 'text-gray-500'}`}>
+                <div className={`is-size-7 has-text-weight-semibold ${deltaColor}`}>
                     {delta === 0 ? '—' : `${delta > 0 ? '▲' : '▼'} ${Math.abs(delta).toFixed(1)} kg`}
-                    <span className="text-gray-400 font-normal ml-1">since {formatShortDate(first.date)}</span>
+                    <span className="has-text-grey-light has-text-weight-normal ml-1">since {formatShortDate(first.date)}</span>
                 </div>
             </div>
-            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+            <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto' }} preserveAspectRatio="xMidYMid meet">
                 <defs>
                     <linearGradient id="weightFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
-                        <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                        <stop offset="0%" stopColor={lineColor} stopOpacity="0.25" />
+                        <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
                     </linearGradient>
                 </defs>
 
@@ -75,11 +78,11 @@ export default function WeightChart({ series }) {
                 })}
 
                 <path d={areaPath} fill="url(#weightFill)" stroke="none" />
-                <path d={linePath} fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+                <path d={linePath} fill="none" stroke={lineColor} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
 
                 {points.map((p, i) => (
                     <circle key={i} cx={xFor(p.date)} cy={yFor(p.weight)} r={i === points.length - 1 ? 4 : 2.5}
-                        fill="#3b82f6" stroke="white" strokeWidth={i === points.length - 1 ? 1.5 : 0} />
+                        fill={lineColor} stroke="white" strokeWidth={i === points.length - 1 ? 1.5 : 0} />
                 ))}
 
                 <text x={padding.left} y={height - 8} fontSize="10" fill="#9ca3af">{formatShortDate(first.date)}</text>

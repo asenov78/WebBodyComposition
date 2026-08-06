@@ -58,34 +58,34 @@ export default function Home() {
   const lastWeight = series.items.length > 0 ? series.items[series.items.length - 1].weight : null;
 
   return (
-    <div className='max-w-3xl mx-auto px-4'>
-      <div className='text-center mt-6 mb-8'>
-        <h1 className='text-3xl font-bold'>
+    <div className='container' style={{ maxWidth: '48rem' }}>
+      <div className='has-text-centered mb-5'>
+        <h1 className='title is-3'>
           Hello, {session?.user?.email?.split('@')[0] ?? 'there'}! 👋
         </h1>
-        <p className='text-gray-500 mt-1'>Here&apos;s where your body composition tracking stands.</p>
+        <p className='subtitle is-6 has-text-grey'>Here&apos;s where your body composition tracking stands.</p>
       </div>
 
       {/* Stat tiles */}
-      <div className='grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6'>
-        <StatTile label='Current weight' value={lastWeight ? `${lastWeight.toFixed(1)} kg` : '—'} accent='blue' />
-        <StatTile label='Synced to Garmin' value={progress.loading ? '…' : `${progress.synced}/${progress.totalMeasurements}`} accent='emerald' />
-        <StatTile label='Still pending' value={progress.loading ? '…' : progress.remaining} accent={progress.remaining > 0 ? 'amber' : 'emerald'} />
-        <StatTile label='Xiaomi' value={xiaomi.loading ? '…' : xiaomi.connected ? 'Connected' : 'Not connected'} accent={xiaomi.connected ? 'emerald' : 'gray'} />
+      <div className='columns is-mobile is-multiline mb-2'>
+        <StatTile label='Current weight' value={lastWeight ? `${lastWeight.toFixed(1)} kg` : '—'} color='link' />
+        <StatTile label='Synced to Garmin' value={progress.loading ? '…' : `${progress.synced}/${progress.totalMeasurements}`} color='success' />
+        <StatTile label='Still pending' value={progress.loading ? '…' : progress.remaining} color={progress.remaining > 0 ? 'warning' : 'success'} />
+        <StatTile label='Xiaomi' value={xiaomi.loading ? '…' : xiaomi.connected ? 'Connected' : 'Not connected'} color={xiaomi.connected ? 'success' : 'light'} />
       </div>
 
       {/* Weight trend chart */}
-      <div className='rounded-2xl border border-gray-200 shadow-sm p-5 mb-6 bg-white'>
-        <h2 className='font-semibold text-gray-700 mb-3'>Weight trend</h2>
+      <div className='box mb-5'>
+        <h2 className='title is-6 has-text-grey-dark mb-3'>Weight trend</h2>
         {series.loading ? (
-          <p className='text-gray-500 text-sm'>Loading…</p>
+          <p className='has-text-grey is-size-7'>Loading…</p>
         ) : (
           <WeightChart series={series.items} />
         )}
       </div>
 
       {/* Connection cards */}
-      <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6'>
+      <div className='columns is-mobile mb-2'>
         <ConnectionCard
           title='Xiaomi Cloud (S400)'
           loading={xiaomi.loading}
@@ -105,38 +105,38 @@ export default function Home() {
       </div>
 
       {progress.remaining > 0 && !progress.loading && (
-        <div className='rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 mb-6 text-sm text-blue-800 flex items-center justify-between flex-wrap gap-2'>
+        <div className='notification is-info is-light is-flex is-justify-content-space-between is-align-items-center is-flex-wrap-wrap mb-5'>
           <span>⏳ Auto-syncing in the background — {progress.remaining} measurement{progress.remaining === 1 ? '' : 's'} still pending.</span>
-          <Link href='/sync/garmin-bulk' className='underline font-semibold whitespace-nowrap'>Sync now →</Link>
+          <Link href='/sync/garmin-bulk' className='has-text-weight-semibold'>Sync now →</Link>
         </div>
       )}
 
       {/* Recent syncs */}
-      <div className='mb-10'>
-        <h2 className='font-semibold text-gray-700 mb-2'>Recent syncs</h2>
-        {measurements.loading && <p className='text-gray-500 text-sm'>Loading…</p>}
+      <div className='mb-6'>
+        <h2 className='title is-6 has-text-grey-dark mb-2'>Recent syncs</h2>
+        {measurements.loading && <p className='has-text-grey is-size-7'>Loading…</p>}
         {!measurements.loading && measurements.items.length === 0 && (
-          <p className='text-gray-500 text-sm'>Nothing synced to Garmin yet.</p>
+          <p className='has-text-grey is-size-7'>Nothing synced to Garmin yet.</p>
         )}
         {!measurements.loading && measurements.items.length > 0 && (
-          <div className='overflow-x-auto rounded-2xl border border-gray-200 shadow-sm bg-white'>
-            <table className='min-w-full text-sm'>
-              <thead className='bg-gray-50'>
+          <div className='box p-0' style={{ overflowX: 'auto' }}>
+            <table className='table is-fullwidth is-hoverable mb-0'>
+              <thead>
                 <tr>
-                  <th className='px-4 py-2.5 text-left text-gray-500 font-medium'>When</th>
-                  <th className='px-4 py-2.5 text-left text-gray-500 font-medium'>Weight (kg)</th>
-                  <th className='px-4 py-2.5 text-left text-gray-500 font-medium'>Status</th>
+                  <th>When</th>
+                  <th>Weight (kg)</th>
+                  <th>Status</th>
                 </tr>
               </thead>
-              <tbody className='divide-y divide-gray-100'>
+              <tbody>
                 {measurements.items.map((m) => (
-                  <tr key={m.id} className='hover:bg-gray-50'>
-                    <td className='px-4 py-2.5 whitespace-nowrap'>{formatDate(m.sourceDate ?? m.createdAt)}</td>
-                    <td className='px-4 py-2.5'>{m.weight}</td>
-                    <td className='px-4 py-2.5'>
+                  <tr key={m.id}>
+                    <td className='is-vcentered'>{formatDate(m.sourceDate ?? m.createdAt)}</td>
+                    <td className='is-vcentered'>{m.weight}</td>
+                    <td className='is-vcentered'>
                       {m.syncedToGarmin
-                        ? <span className='text-emerald-600'>✅ Sent to Garmin</span>
-                        : <span className='text-red-500' title={m.syncError}>⚠️ Failed</span>}
+                        ? <span className='tag is-success is-light'>✅ Sent to Garmin</span>
+                        : <span className='tag is-danger is-light' title={m.syncError}>⚠️ Failed</span>}
                     </td>
                   </tr>
                 ))}
@@ -149,37 +149,35 @@ export default function Home() {
   )
 }
 
-function StatTile({ label, value, accent }) {
-  const accentClasses = {
-    blue: 'bg-blue-50 text-blue-700',
-    emerald: 'bg-emerald-50 text-emerald-700',
-    amber: 'bg-amber-50 text-amber-700',
-    gray: 'bg-gray-50 text-gray-600',
-  };
+function StatTile({ label, value, color }) {
   return (
-    <div className={`rounded-2xl p-4 ${accentClasses[accent] || accentClasses.gray}`}>
-      <div className='text-xs font-medium opacity-75 mb-1'>{label}</div>
-      <div className='text-xl font-bold'>{value}</div>
+    <div className='column'>
+      <div className={`box has-text-centered py-3 has-background-${color}-light`}>
+        <p className='is-size-7 has-text-weight-medium has-text-grey-dark mb-1'>{label}</p>
+        <p className='title is-5 mb-0'>{value}</p>
+      </div>
     </div>
   );
 }
 
 function ConnectionCard({ title, loading, connected, subtitle, href, cta }) {
   return (
-    <div className='rounded-2xl border border-gray-200 shadow-sm p-4 bg-white flex items-center justify-between'>
-      <div>
-        <h3 className='font-semibold text-gray-700'>{title}</h3>
-        {loading ? (
-          <p className='text-sm text-gray-400 mt-1'>Checking…</p>
-        ) : (
-          <p className={`text-sm mt-1 ${connected ? 'text-emerald-600' : 'text-gray-400'}`}>
-            {connected ? `✅ ${subtitle || 'Connected'}` : '⚪ Not connected'}
-          </p>
-        )}
+    <div className='column'>
+      <div className='box is-flex is-justify-content-space-between is-align-items-center'>
+        <div>
+          <p className='has-text-weight-semibold'>{title}</p>
+          {loading ? (
+            <p className='is-size-7 has-text-grey mt-1'>Checking…</p>
+          ) : (
+            <p className={`is-size-7 mt-1 ${connected ? 'has-text-success' : 'has-text-grey'}`}>
+              {connected ? `✅ ${subtitle || 'Connected'}` : '⚪ Not connected'}
+            </p>
+          )}
+        </div>
+        <Link href={href} className='has-text-weight-semibold is-size-7' style={{ whiteSpace: 'nowrap' }}>
+          {cta} →
+        </Link>
       </div>
-      <Link href={href} className='text-sm font-semibold text-blue-600 hover:text-blue-800 whitespace-nowrap ml-3'>
-        {cta} →
-      </Link>
     </div>
   );
 }

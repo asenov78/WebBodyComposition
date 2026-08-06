@@ -408,35 +408,34 @@ export default function XiaomiCloud() {
         { key: 'height', label: 'Height (cm)' },
     ];
 
-    const fieldInputClass = 'mt-1 block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50';
     const showDetailFields = !isSavedServerSide || showConnectionDetails;
 
     return (
-        <div className='max-w-3xl mx-auto px-4'>
-            <div className='text-center mt-6 mb-8'>
-                <h1 className='text-3xl font-bold'>Mi Cloud Connector</h1>
-                <p className='text-gray-500 mt-1'>S400 scale → Xiaomi Cloud → this app.</p>
+        <div className='container' style={{ maxWidth: '48rem' }}>
+            <div className='has-text-centered mb-5'>
+                <h1 className='title is-3'>Mi Cloud Connector</h1>
+                <p className='subtitle is-6 has-text-grey'>S400 scale → Xiaomi Cloud → this app.</p>
             </div>
 
             {isLoadingConnection && (
-                <p className='text-center text-gray-500 mt-4'>Checking saved connection…</p>
+                <p className='has-text-centered has-text-grey'>Checking saved connection…</p>
             )}
 
             {/* One form for the whole connect/fetch flow — the "Get Measurements" button
                 stays inside it (not a detached form= reference) so it keeps working
                 whether or not the detail fields below are expanded. */}
             {!isLoadingConnection && !isPollingPassToken && (
-                <form onSubmit={submitMeasurements} className='rounded-2xl border border-gray-200 shadow-sm bg-white p-5 mb-6 space-y-4'>
+                <form onSubmit={submitMeasurements} className='box mb-5'>
                     {isSavedServerSide && (
-                        <div className='flex items-center justify-between flex-wrap gap-3'>
+                        <div className='is-flex is-justify-content-space-between is-align-items-center is-flex-wrap-wrap mb-3'>
                             <div>
-                                <h2 className='font-semibold text-gray-700'>✅ Connected to Xiaomi Cloud</h2>
-                                <p className='text-sm text-gray-500 mt-1'>Account-wide — works from any device, no need to reconnect.</p>
+                                <p className='has-text-weight-semibold'>✅ Connected to Xiaomi Cloud</p>
+                                <p className='is-size-7 has-text-grey mt-1'>Account-wide — works from any device, no need to reconnect.</p>
                             </div>
                             <button
                                 type='submit'
                                 disabled={!isGetMeasurementsEnabled || isSubmitting}
-                                className='bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold text-sm py-2 px-4 rounded-lg whitespace-nowrap'
+                                className='button is-link'
                             >
                                 {isSubmitting ? 'Checking…' : 'Get Measurements'}
                             </button>
@@ -444,16 +443,16 @@ export default function XiaomiCloud() {
                     )}
 
                     {isSavedServerSide && (
-                        <div className='flex items-center gap-4'>
+                        <div className='is-flex is-align-items-center mb-3' style={{ gap: '1rem' }}>
                             <button
                                 type='button'
                                 onClick={() => setShowConnectionDetails((v) => !v)}
-                                className='text-xs text-gray-400 hover:text-gray-600 underline'
+                                className='button is-text is-small p-0'
                             >
                                 {showConnectionDetails ? 'Hide' : 'Show'} connection details
                             </button>
                             {!showConnectionDetails && (
-                                <a href='#' className='text-xs text-gray-400 hover:text-red-500 underline' onClick={(e) => { e.preventDefault(); disconnectXiaomi(); }}>
+                                <a href='#' className='is-size-7 has-text-danger' onClick={(e) => { e.preventDefault(); disconnectXiaomi(); }}>
                                     Disconnect
                                 </a>
                             )}
@@ -461,96 +460,114 @@ export default function XiaomiCloud() {
                     )}
 
                     {showDetailFields && (
-                    <div className={`space-y-4 ${isSavedServerSide ? 'pt-4 border-t border-gray-100' : ''}`}>
+                    <div className={isSavedServerSide ? 'pt-4' : ''} style={isSavedServerSide ? { borderTop: '1px solid #f0f0f0' } : undefined}>
                     {!isSavedServerSide && (
-                        <p className='text-sm text-gray-500 -mt-1'>Connect once — scan the QR code below, and it&apos;s remembered on your account from then on.</p>
+                        <p className='is-size-7 has-text-grey mb-4'>Connect once — scan the QR code below, and it&apos;s remembered on your account from then on.</p>
                     )}
 
-                    <label className='block'>
-                        <span className='text-gray-700 text-sm font-medium'>User ID</span>
-                        <input
-                            type='number'
-                            name='userId'
-                            value={userId}
-                            onChange={(e) => setUserId(e.target.value)}
-                            className={fieldInputClass}
-                            placeholder='123456789'
-                        />
-                    </label>
+                    <div className='field'>
+                        <label className='label is-small'>User ID</label>
+                        <div className='control'>
+                            <input
+                                type='number'
+                                name='userId'
+                                value={userId}
+                                onChange={(e) => setUserId(e.target.value)}
+                                className='input'
+                                placeholder='123456789'
+                            />
+                        </div>
+                    </div>
 
-                    <label className='block'>
-                        <span className='text-gray-700 text-sm font-medium'>Pass Token</span>
-                        <textarea
-                            name='passToken'
-                            rows={3}
-                            value={passToken}
-                            onChange={(e) => setPassToken(e.target.value)}
-                            className={fieldInputClass}
-                            placeholder='Paste pass token here'
-                        />
-                    </label>
+                    <div className='field'>
+                        <label className='label is-small'>Pass Token</label>
+                        <div className='control'>
+                            <textarea
+                                name='passToken'
+                                rows={3}
+                                value={passToken}
+                                onChange={(e) => setPassToken(e.target.value)}
+                                className='textarea'
+                                placeholder='Paste pass token here'
+                            />
+                        </div>
+                    </div>
 
-                    <div className='flex items-center gap-3 flex-wrap'>
-                        <button
-                            type='button'
-                            onClick={getPassToken}
-                            disabled={isGettingPassToken || isSubmitting}
-                            className='bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-semibold text-sm py-2 px-4 rounded-lg'
-                        >
-                            {isGettingPassToken ? 'Getting pass token...' : 'Get Pass Token (QR login)'}
-                        </button>
+                    <div className='field is-grouped is-align-items-center mb-4'>
+                        <div className='control'>
+                            <button
+                                type='button'
+                                onClick={getPassToken}
+                                disabled={isGettingPassToken || isSubmitting}
+                                className='button is-success'
+                            >
+                                {isGettingPassToken ? 'Getting pass token...' : 'Get Pass Token (QR login)'}
+                            </button>
+                        </div>
                         {isSavedServerSide && (
-                            <a href='#' className='text-xs text-gray-400 hover:text-red-500 underline' onClick={(e) => { e.preventDefault(); disconnectXiaomi(); }}>
-                                Disconnect / use a different account
-                            </a>
+                            <div className='control'>
+                                <a href='#' className='is-size-7 has-text-danger' onClick={(e) => { e.preventDefault(); disconnectXiaomi(); }}>
+                                    Disconnect / use a different account
+                                </a>
+                            </div>
                         )}
                     </div>
 
-                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                        <label className='block'>
-                            <span className='text-gray-700 text-sm font-medium'>Account region</span>
-                            <select
-                                name='region'
-                                value={region}
-                                onChange={(e) => setRegion(e.target.value)}
-                                className={fieldInputClass}
-                            >
-                                {regionOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.value} - {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+                    <div className='columns'>
+                        <div className='column'>
+                            <div className='field'>
+                                <label className='label is-small'>Account region</label>
+                                <div className='control'>
+                                    <div className='select is-fullwidth'>
+                                        <select
+                                            name='region'
+                                            value={region}
+                                            onChange={(e) => setRegion(e.target.value)}
+                                        >
+                                            {regionOptions.map((option) => (
+                                                <option key={option.value} value={option.value}>
+                                                    {option.value} - {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                        <label className='block'>
-                            <span className='text-gray-700 text-sm font-medium'>Scale model</span>
-                            <select
-                                name='model'
-                                value={model}
-                                onChange={(e) => setModel(e.target.value)}
-                                className={fieldInputClass}
-                            >
-                                {!modelOptions.some((option) => option.value === model) && model && (
-                                    <option value={model}>
-                                        {model} (saved)
-                                    </option>
-                                )}
-                                {modelOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+                        <div className='column'>
+                            <div className='field'>
+                                <label className='label is-small'>Scale model</label>
+                                <div className='control'>
+                                    <div className='select is-fullwidth'>
+                                        <select
+                                            name='model'
+                                            value={model}
+                                            onChange={(e) => setModel(e.target.value)}
+                                        >
+                                            {!modelOptions.some((option) => option.value === model) && model && (
+                                                <option value={model}>
+                                                    {model} (saved)
+                                                </option>
+                                            )}
+                                            {modelOptions.map((option) => (
+                                                <option key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {!isSavedServerSide && (
-                        <div className='pt-2'>
+                        <div className='field'>
                             <button
                                 type='submit'
                                 disabled={!isGetMeasurementsEnabled || isSubmitting || isGettingPassToken}
-                                className='bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold text-sm py-2 px-4 rounded-lg'
+                                className='button is-link'
                             >
                                 {isSubmitting ? 'Getting measurements...' : 'Get Measurements'}
                             </button>
@@ -560,127 +577,112 @@ export default function XiaomiCloud() {
                     )}
 
                     {message && (
-                        <div className='text-sm text-gray-700 whitespace-pre-wrap'>
+                        <p className='is-size-7 has-text-grey-dark mt-3' style={{ whiteSpace: 'pre-wrap' }}>
                             {message}
-                        </div>
+                        </p>
                     )}
                 </form>
             )}
 
             {isPollingPassToken && (
-                <div className='rounded-2xl border border-gray-200 shadow-sm bg-white p-5 mb-6 space-y-4'>
-                    <div>
-                        <h2 className='font-semibold text-gray-700'>Waiting for Xiaomi login</h2>
-                        <p className='text-sm text-gray-500 mt-1'>Scan the QR code or open the login link, then wait for polling to finish.</p>
+                <div className='box mb-5 has-text-centered'>
+                    <div className='has-text-left mb-3'>
+                        <p className='has-text-weight-semibold'>Waiting for Xiaomi login</p>
+                        <p className='is-size-7 has-text-grey mt-1'>Scan the QR code or open the login link, then wait for polling to finish.</p>
                     </div>
 
                     {loginSessionId && (
-                        <div className='text-xs text-gray-400'>Session ID: {loginSessionId}</div>
+                        <p className='is-size-7 has-text-grey mb-3'>Session ID: {loginSessionId}</p>
                     )}
                     {qrCodeBase64 && (
-                        <div className='flex justify-center'>
+                        <figure className='image is-inline-block mb-3'>
                             <img
                                 src={`data:image/png;base64,${qrCodeBase64}`}
                                 alt='Xiaomi login QR code'
-                                className='max-w-full rounded-lg border border-gray-200 bg-white p-2'
+                                style={{ maxWidth: '220px', border: '1px solid #f0f0f0', borderRadius: '6px', padding: '0.5rem' }}
                             />
-                        </div>
+                        </figure>
                     )}
                     {loginUrl && (
-                        <div className='break-all text-center text-sm'>
-                            <a
-                                href={loginUrl}
-                                target='_blank'
-                                rel='noreferrer'
-                                className='font-semibold text-blue-700 underline'
-                            >
+                        <p className='is-size-7 mb-3' style={{ wordBreak: 'break-all' }}>
+                            <a href={loginUrl} target='_blank' rel='noreferrer' className='has-text-weight-semibold'>
                                 {loginUrl}
                             </a>
-                        </div>
+                        </p>
                     )}
                     {pollingEndpoint && (
-                        <div className='text-xs text-gray-400'>Polling endpoint: {pollingEndpoint}</div>
+                        <p className='is-size-7 has-text-grey mb-3'>Polling endpoint: {pollingEndpoint}</p>
                     )}
-                    <div className='text-sm text-center text-gray-700 whitespace-pre-wrap'>
+                    <p className='is-size-7 mb-4' style={{ whiteSpace: 'pre-wrap' }}>
                         {message || 'Polling for pass token...'}
-                    </div>
-                    <div className='text-center'>
-                        <button
-                            type='button'
-                            onClick={cancelPassTokenPolling}
-                            className='bg-red-600 hover:bg-red-700 text-white font-semibold text-sm py-2 px-4 rounded-lg'
-                        >
-                            Cancel Login
-                        </button>
-                    </div>
+                    </p>
+                    <button
+                        type='button'
+                        onClick={cancelPassTokenPolling}
+                        className='button is-danger'
+                    >
+                        Cancel Login
+                    </button>
                 </div>
             )}
 
             {fetchSummary && weightRecords.length === 0 && (
-                <div className='rounded-2xl bg-emerald-50 border border-emerald-100 px-4 py-4 mb-6 text-sm text-emerald-800 text-center'>
+                <div className='notification is-success is-light has-text-centered'>
                     ✅ You&apos;re all caught up — no new measurements ({fetchSummary.duplicates} of {fetchSummary.total} fetched were already saved).
                 </div>
             )}
 
             {weightRecords.length > 0 && (
-                <div className='mb-6'>
-                    <h2 className='font-semibold text-gray-700 mb-2'>
+                <div className='mb-5'>
+                    <p className='has-text-weight-semibold mb-2'>
                         🎉 {weightRecords.length} new measurement{weightRecords.length === 1 ? '' : 's'}
                         {fetchSummary && (
-                            <span className='font-normal text-gray-400 text-sm ml-2'>
+                            <span className='has-text-weight-normal has-text-grey is-size-7 ml-2'>
                                 ({fetchSummary.duplicates} of {fetchSummary.total} fetched were already saved)
                             </span>
                         )}
-                    </h2>
-                    <div className='overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm'>
-                        <div className='overflow-x-auto'>
-                            <table className='min-w-full divide-y divide-gray-200 text-sm'>
-                                <thead className='bg-gray-50'>
-                                    <tr>
-                                        <th className='px-4 py-2.5 text-left text-gray-500 font-medium whitespace-nowrap'>Date</th>
+                    </p>
+                    <div className='box p-0' style={{ overflowX: 'auto' }}>
+                        <table className='table is-fullwidth is-hoverable is-narrow mb-0'>
+                            <thead>
+                                <tr>
+                                    <th style={{ whiteSpace: 'nowrap' }}>Date</th>
+                                    {metricFields.map((field) => (
+                                        <th key={field.key} style={{ whiteSpace: 'nowrap' }}>
+                                            {field.label}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {weightRecords.map((record, index) => (
+                                    <tr key={`${record.date || 'record'}-${index}`}>
+                                        <td style={{ whiteSpace: 'nowrap' }} className='has-text-weight-medium'>
+                                            {formatDate(record.date)}
+                                        </td>
                                         {metricFields.map((field) => (
-                                            <th key={field.key} className='px-4 py-2.5 text-left text-gray-500 font-medium whitespace-nowrap'>
-                                                {field.label}
-                                            </th>
+                                            <td key={field.key} style={{ whiteSpace: 'nowrap' }}>
+                                                {formatValue(record[field.key])}
+                                            </td>
                                         ))}
                                     </tr>
-                                </thead>
-                                <tbody className='divide-y divide-gray-100 bg-white'>
-                                    {weightRecords.map((record, index) => (
-                                        <tr key={`${record.date || 'record'}-${index}`} className='hover:bg-gray-50'>
-                                            <td className='whitespace-nowrap px-4 py-2.5 font-medium text-gray-900'>
-                                                {formatDate(record.date)}
-                                            </td>
-                                            {metricFields.map((field) => (
-                                                <td key={field.key} className='whitespace-nowrap px-4 py-2.5 text-gray-700'>
-                                                    {formatValue(record[field.key])}
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             )}
 
-            <div className='flex flex-wrap items-center gap-3 mb-10'>
+            <div className='is-flex is-align-items-center is-flex-wrap-wrap mb-6' style={{ gap: '0.75rem' }}>
                 <Link href='/' passHref>
-                    <button
-                        type='button'
-                        className='bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-sm py-2 px-4 rounded-lg'
-                    >
+                    <button type='button' className='button is-light'>
                         &lt; Back
                     </button>
                 </Link>
 
                 {fetchSummary && !isPollingPassToken && (
                     <Link href='/sync/garmin-bulk' passHref className='ml-auto'>
-                        <button
-                            type='button'
-                            className='bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm py-2 px-4 rounded-lg'
-                        >
+                        <button type='button' className='button is-success'>
                             Continue → Connect to Garmin
                         </button>
                     </Link>

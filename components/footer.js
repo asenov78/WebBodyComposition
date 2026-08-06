@@ -1,8 +1,8 @@
 
 export default function Footer() {
     return (
-        <footer className="text-center items-center">
-            <div className="mt-5 mb-3 text-gray-500 text-sm">
+        <footer className="footer py-4">
+            <div className="content has-text-centered is-size-7 has-text-grey">
                 web-body-composition
             </div>
         </footer>

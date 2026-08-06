@@ -1,3 +1,19 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'bulma/css/bulma.min.css';
+
+/* App-wide tweaks on top of Bulma's defaults — kept minimal, prefer Bulma's
+   own classes (box, button, field, notification, table, tag, ...) over
+   custom CSS wherever possible. */
+
+html, body, #__next {
+    height: 100%;
+}
+
+.app-shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-main {
+    flex: 1 1 auto;
+}

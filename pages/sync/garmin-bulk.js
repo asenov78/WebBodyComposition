@@ -83,28 +83,28 @@ export default function GarminBulkSync() {
 
     if (authStatus === 'unauthenticated') {
         return (
-            <div className='flex flex-wrap'>
-                <div className='w-full max-w-sm ml-auto mr-auto text-center'>
-                    <h1 className='text-2xl font-bold mb-5'>Log in required</h1>
-                    <Link href="/login" className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded'>Log In</Link>
+            <div className='columns is-centered'>
+                <div className='column is-narrow has-text-centered' style={{ width: '24rem' }}>
+                    <h1 className='title is-4'>Log in required</h1>
+                    <Link href="/login" className='button is-link'>Log In</Link>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className='flex flex-wrap'>
-            <div className='w-full max-w-sm ml-auto mr-auto'>
-                <h1 className='text-2xl font-bold text-center mb-5'>Garmin Connect</h1>
+        <div className='columns is-centered'>
+            <div className='column is-narrow' style={{ width: '24rem' }}>
+                <h1 className='title is-4 has-text-centered'>Garmin Connect</h1>
 
                 {progress.loading ? (
-                    <p className='text-center text-gray-500 mb-4'>Loading progress…</p>
+                    <p className='has-text-centered has-text-grey mb-4'>Loading progress…</p>
                 ) : (
-                    <div className='text-center mb-6 rounded-xl border border-gray-200 bg-gray-50 p-3'>
-                        <p className='font-semibold'>{progress.synced} / {progress.totalMeasurements} synced to Garmin</p>
-                        <p className='text-sm text-gray-600'>{progress.remaining} still pending</p>
+                    <div className='box has-text-centered mb-5'>
+                        <p className='has-text-weight-semibold'>{progress.synced} / {progress.totalMeasurements} synced to Garmin</p>
+                        <p className='is-size-7 has-text-grey'>{progress.remaining} still pending</p>
                         {progress.remaining > 0 && (
-                            <p className='text-xs text-gray-500 mt-1'>
+                            <p className='is-size-7 has-text-grey-light mt-1'>
                                 Auto-syncing in the background every ~10 minutes — this page updates itself, no need to keep it open.
                             </p>
                         )}
@@ -112,84 +112,93 @@ export default function GarminBulkSync() {
                 )}
 
                 {!connection.loading && connection.connected && (
-                    <div className='text-center mb-4'>
-                        <p>✅ Garmin connected as <strong>{connection.email}</strong></p>
-                    </div>
+                    <p className='has-text-centered mb-4'>
+                        ✅ Garmin connected as <strong>{connection.email}</strong>
+                    </p>
                 )}
 
                 {!connection.loading && !connection.connected && (
-                    <form onSubmit={runSync}>
-                        <p className='text-center text-gray-600 mb-4 text-sm'>
-                            Connect once — after that, new Xiaomi measurements sync to Garmin automatically.
-                        </p>
-                        <label className="block">
-                            <span className="text-gray-700">Garmin Email address</span>
-                            <input
-                                type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                                placeholder="john@example.com"
-                            />
-                        </label>
-                        <label className="block mt-2">
-                            <span className="text-gray-700">Garmin Password</span>
-                            <input
-                                type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                                placeholder="********"
-                            />
-                        </label>
-                        <p className="text-xs text-gray-500 mt-1">Garmin&apos;s API does not support 2FA — disable it on your Garmin account first.</p>
+                    <div className='box'>
+                        <form onSubmit={runSync}>
+                            <p className='has-text-centered has-text-grey is-size-7 mb-4'>
+                                Connect once — after that, new Xiaomi measurements sync to Garmin automatically.
+                            </p>
+                            <div className='field'>
+                                <label className='label is-small'>Garmin Email address</label>
+                                <div className='control'>
+                                    <input
+                                        type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                                        className="input"
+                                        placeholder="john@example.com"
+                                    />
+                                </div>
+                            </div>
+                            <div className='field'>
+                                <label className='label is-small'>Garmin Password</label>
+                                <div className='control'>
+                                    <input
+                                        type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
+                                        className="input"
+                                        placeholder="********"
+                                    />
+                                </div>
+                            </div>
+                            <p className="help">Garmin&apos;s API does not support 2FA — disable it on your Garmin account first.</p>
 
-                        {showMFACode && (
-                            <label className="block mt-4">
-                                <span className="text-gray-700">MFA Code</span>
-                                <input
-                                    type="text" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} required
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                                    placeholder="123456"
-                                />
-                            </label>
-                        )}
+                            {showMFACode && (
+                                <div className='field mt-4'>
+                                    <label className='label is-small'>MFA Code</label>
+                                    <div className='control'>
+                                        <input
+                                            type="text" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} required
+                                            className="input"
+                                            placeholder="123456"
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
-                        <button type="submit" disabled={isSyncing}
-                            className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-5 w-full disabled:opacity-50'>
-                            {isSyncing ? 'Connecting…' : 'Connect & Sync'}
-                        </button>
-                    </form>
+                            <div className='field mt-5'>
+                                <button type="submit" disabled={isSyncing} className='button is-link is-fullwidth'>
+                                    {isSyncing ? 'Connecting…' : 'Connect & Sync'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 )}
 
                 {!connection.loading && connection.connected && progress.remaining > 0 && (
                     <button type="button" onClick={runSync} disabled={isSyncing}
-                        className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full disabled:opacity-50'>
+                        className='button is-link is-fullwidth mb-4'>
                         {isSyncing ? 'Syncing…' : 'Sync Now (don’t wait for the next auto-run)'}
                     </button>
                 )}
 
                 {result && (
-                    <div className="mt-4 text-center text-sm">
-                        {result.error && <p className="text-red-600">{result.error}</p>}
-                        {result.firstError && <p className="text-red-600">❌ {result.firstError}</p>}
-                        {result.message && !result.error && !result.firstError && <p className="text-gray-700">{result.message}</p>}
+                    <div className="has-text-centered is-size-7 mb-4">
+                        {result.error && <p className="has-text-danger">{result.error}</p>}
+                        {result.firstError && <p className="has-text-danger">❌ {result.firstError}</p>}
+                        {result.message && !result.error && !result.firstError && <p className="has-text-grey-dark">{result.message}</p>}
                         {typeof result.synced === 'number' && (
                             <p className="mt-1">
                                 ✅ {result.synced} synced just now
-                                {result.failed > 0 && <span className="text-red-600"> · ⚠️ {result.failed} failed</span>}
+                                {result.failed > 0 && <span className="has-text-danger"> · ⚠️ {result.failed} failed</span>}
                             </p>
                         )}
                     </div>
                 )}
 
-                <div className='flex flex-wrap mt-6'>
+                <div className='is-flex mb-4'>
                     <Link href="/cloud/xiaomiCloud" passHref>
-                        <button type="button" className='bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded mr-auto'>
+                        <button type="button" className='button is-light mr-auto'>
                             &lt; Back
                         </button>
                     </Link>
                 </div>
 
-                <div className="text-center mt-6">
-                    <Link href="/" className="underline text-sm">Back to dashboard</Link>
-                </div>
+                <p className="has-text-centered is-size-7">
+                    <Link href="/">Back to dashboard</Link>
+                </p>
             </div>
         </div>
     );

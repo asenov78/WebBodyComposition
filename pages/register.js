@@ -55,59 +55,71 @@ export default function Register() {
     };
 
     return (
-        <div className='flex flex-wrap'>
-            <div className='w-full max-w-sm ml-auto mr-auto'>
-                <h1 className='text-2xl font-bold text-center mb-5'>Create Account</h1>
-                <form onSubmit={handleSubmit}>
-                    <label className="block">
-                        <span className="text-gray-700">Email address</span>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                            placeholder="john@example.com"
-                        />
-                    </label>
-                    <label className="block mt-4">
-                        <span className="text-gray-700">Password</span>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            minLength={8}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                            placeholder="At least 8 characters"
-                        />
-                    </label>
-                    <label className="block mt-4">
-                        <span className="text-gray-700">Confirm Password</span>
-                        <input
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                            placeholder="********"
-                        />
-                    </label>
+        <div className='columns is-centered'>
+            <div className='column is-narrow' style={{ width: '24rem' }}>
+                <h1 className='title is-4 has-text-centered'>Create Account</h1>
+                <div className='box'>
+                    <form onSubmit={handleSubmit}>
+                        <div className='field'>
+                            <label className='label'>Email address</label>
+                            <div className='control'>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                    className="input"
+                                    placeholder="john@example.com"
+                                />
+                            </div>
+                        </div>
 
-                    {error && <p className="text-red-600 mt-3">{error}</p>}
+                        <div className='field'>
+                            <label className='label'>Password</label>
+                            <div className='control'>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    minLength={8}
+                                    className="input"
+                                    placeholder="At least 8 characters"
+                                />
+                            </div>
+                        </div>
 
-                    <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-5 w-full disabled:opacity-50'
-                    >
-                        {isSubmitting ? 'Creating account…' : 'Register'}
-                    </button>
+                        <div className='field'>
+                            <label className='label'>Confirm Password</label>
+                            <div className='control'>
+                                <input
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    required
+                                    className="input"
+                                    placeholder="********"
+                                />
+                            </div>
+                        </div>
 
-                    <p className="text-center mt-4">
-                        Already have an account? <Link href="/login" className="underline">Log in</Link>
-                    </p>
-                </form>
+                        {error && <p className="help is-danger">{error}</p>}
+
+                        <div className='field mt-5'>
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className='button is-primary is-fullwidth'
+                            >
+                                {isSubmitting ? 'Creating account…' : 'Register'}
+                            </button>
+                        </div>
+
+                        <p className="has-text-centered is-size-7">
+                            Already have an account? <Link href="/login">Log in</Link>
+                        </p>
+                    </form>
+                </div>
             </div>
         </div>
     );

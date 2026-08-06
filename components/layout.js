@@ -15,12 +15,10 @@ export default function Layout({ children }) {
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <link rel="icon" href="/favicon.ico" />
             </Head>
-            <div className='flex flex-col h-screen justify-between'>
+            <div className='app-shell'>
                 <Navbar />
-                <main className='flex w-full justify-center'>
-                    <div className='w-full px-4'>
-                        {children}
-                    </div>
+                <main className='app-main section'>
+                    {children}
                 </main>
 
                 <Footer />

@@ -63,22 +63,28 @@ Watch [issue #15](https://github.com/lswiderski/yet-another-garmin-connect-clien
 same real-credentials test, and flip `GARMIN_PROXY_URL` in Vercel prod if it
 passes.
 
-## Design: evaluate Bulma instead of ad-hoc Tailwind utility classes
+## Design: Bulma — DONE
 
-User likes [bulma.io](https://bulma.io)'s look. Current UI is Tailwind
-utility classes, hand-styled per page (no design system/component library) —
-`pages/index.js`, `pages/cloud/xiaomiCloud.js`, `pages/sync/garmin-bulk.js`,
-`pages/login.js`, `pages/register.js`. Not started — would touch every page,
-so worth a proper before/after look first rather than converting mid-flight.
-Options to weigh once we get to it:
-- Full swap to Bulma (drop Tailwind, adopt Bulma's classes + SCSS variables
-  for theming) — biggest rewrite, most consistent result.
-- Keep Tailwind, just crib Bulma's visual language (card/button/tag styling,
-  spacing scale) into the existing Tailwind classes — smaller diff, no new
-  dependency, but manual upkeep instead of a real design system.
-- Tailwind + a component layer inspired by Bulma's primitives (buttons,
-  cards, notifications) as shared React components in `components/` — middle
-  ground, reusable, still Tailwind under the hood.
+Switched the whole UI from ad-hoc Tailwind utility classes to
+[Bulma](https://bulma.io) (user liked its look). Full swap, not a partial
+crib: `npm uninstall tailwindcss @tailwindcss/forms autoprefixer postcss`,
+`npm install bulma`, `styles/globals.css` now just `@import
+'bulma/css/bulma.min.css'` plus a couple of layout helper classes
+(`.app-shell`/`.app-main` for the sticky footer). `tailwind.config.js` and
+`postcss.config.js` removed.
+
+Every page/component rewritten to Bulma's class vocabulary (`box`, `field`/
+`control`/`input`, `button is-primary|is-link|...`, `notification`, `tag`,
+`table is-fullwidth`, `navbar` with a working burger menu) —
+`components/layout.js`, `components/navbar.js`, `components/footer.js`,
+`components/weightChart.js`, `pages/index.js`, `pages/login.js`,
+`pages/register.js`, `pages/cloud/xiaomiCloud.js`, `pages/sync/garmin.js`,
+`pages/sync/garmin-bulk.js`. `components/scanner.js` left untouched — it's
+dead code, not imported anywhere (Bluetooth flow isn't in this fork's UI).
+
+Verified: `npm run build` clean, all 25 Vitest tests pass, dev server
+checked in-browser (computed styles confirmed Bulma classes resolve, e.g.
+`.button.is-primary` background matches Bulma's palette).
 
 ### Reliability fix that came out of this: cron scheduling
 
