@@ -40,7 +40,8 @@ settled rather than mid-churn.
 
 ## Self-hosted replacement for third-party proxies (goal: everything runs on our own infra)
 
-- **Garmin upload** — **DONE, switched over.** See below.
+- **Garmin upload** — **reverted back to the third-party proxy.** Self-host
+  attempt shipped, then rolled back the same day — see below.
 - **Xiaomi Cloud login + weights fetch** — `https://grzegorz366-20366.wykr.es`
   - Still not attempted. Harder: reverse-engineered, undocumented QR-code SSO
     login protocol, no known open-source implementation found (checked
@@ -49,12 +50,37 @@ settled rather than mid-churn.
     this means reverse engineering Xiaomi's login/signing flow ourselves.
     Higher risk (Xiaomi can change the protocol without notice) and effort.
 
-### Garmin: self-hosted proxy is live in production — DONE
+### Garmin: self-host reverted — fresh-login latency, not proxy-specific
 
-`GARMIN_PROXY_URL` in Vercel production now points at
-`https://linux-bot.tail8b795f.ts.net/upload` — our own patched
-build of YAGCC, running on `linux-bot`. `frog01-20364.wykr.es` (the
-original third-party proxy) is no longer used.
+`GARMIN_PROXY_URL` was switched to our patched YAGCC build on `linux-bot`
+(see below for that work), then a new user's first-time Garmin connect
+started failing with `Could not reach the Garmin upload proxy
+(ECONNABORTED)`. Timed a real request directly: **fresh (no cached OAuth
+token) logins take 7s+** — a full Garmin SSO round-trip, inherently
+slower than a token-reuse upload. Our client timeout was 6s.
+
+Checked whether this was specific to our self-hosted instance before
+reverting: **it wasn't** — timed the same request against the original
+third-party proxy (`frog01-20364.wykr.es`) and got the same ~7.4s. Both
+proxies run essentially the same upstream code, so this is a Garmin-side
+(or general internet-path) latency increase, not something wrong with
+our own hosting.
+
+**Fix, done**: `lib/garminSync.js` axios timeout `6000 -> 20000`ms — still
+well under the 30s Vercel `maxDuration` on `/api/sync/garmin/bulk`
+(`vercel.json`) that the connect flow posts to. `GARMIN_PROXY_URL`
+reverted to the third-party proxy (env var removed from Vercel prod) —
+self-host was in production for less than a day; not worth debugging the
+*additional* self-host-specific slowness (patched build was ~1s for a
+cached-token upload but the fresh-login path specifically wasn't timed
+before the revert) while a real fix (the timeout) already unblocks
+things regardless of which proxy is used.
+
+**If self-hosting Garmin is revisited**: re-time a fresh (uncached)
+login against `linux-bot`'s patched build specifically before cutting
+over again — a slow home-laptop-via-Tailscale-Funnel network path could
+still be meaningfully slower than a proper host even after accounting
+for the general Garmin-side latency increase found here.
 
 **Root cause of the blocker** (issue #15) traced all the way through the
 source (`gh api`, not summaries): `TryToAuthenticate()` in `Client.cs`
