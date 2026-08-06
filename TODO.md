@@ -63,6 +63,67 @@ Watch [issue #15](https://github.com/lswiderski/yet-another-garmin-connect-clien
 same real-credentials test, and flip `GARMIN_PROXY_URL` in Vercel prod if it
 passes.
 
+### Root cause, actually traced this time (not just "known bug")
+
+Read the whole call chain on GitHub (`gh api`, not the summarized README):
+`UploadEndpoints.cs` → `Client.Weight.cs UploadWeight()` → `Client.cs
+TryToAuthenticate()`. Found it:
+
+- `TryToAuthenticate()` calls the real Garmin SSO login (`Authenticate()`).
+  If login **throws** (`GarminClientException` or any `Exception`) — as
+  opposed to cleanly returning `IsSuccess: false` — the `catch` block only
+  does `_logger.Error(ex, ex.Message)` (internal NLog only) and returns
+  `result` **without ever setting `result.ErrorLogs`**. `UploadResult.
+  ErrorLogs` has no default initializer (`IList<string> ErrorLogs { get;
+  set; }`), so it's `null`, not empty.
+- Because auth threw, `IsOAuthValid` stays false, so `TryToUploadActivity()`
+  — the *only* other place that sets `ErrorLogs` — never runs.
+- `UploadEndpoints.cs` then does
+  `uploadResult.ErrorLogs.LastOrDefault()` on that null list → the exact
+  `ArgumentNullException: Value cannot be null (Parameter 'source')` we hit.
+
+**So the real problem is that Garmin's login (`Authenticate()`) is throwing
+an exception for us, and the null-check bug is just hiding what that
+exception actually says.** Corroborating evidence: the maintainer's two most
+recent commits (May 31, 2026) are "First try with multi flow auth" and
+"Extended random delays between requests" — exactly the kind of change you'd
+make if Garmin's SSO flow started tripping bot detection / rate limiting.
+Also confirmed separately (issue #13): `ClientFactory.Create()` fetches
+OAuth consumer keys from `github.com/.../raw/main/oauth_consumer.json` on
+**every** request with no persistent cache — a different, real fragility of
+self-hosting this project (frequent GitHub 429s under load), though not the
+cause of our specific crash (a 429 there throws before auth and would
+surface as a Flurl exception message, not this one).
+
+**Plan**:
+1. Fork, patch two things, build our own Docker image (repo has its own
+   Dockerfile, so `docker build` needs no local .NET toolchain):
+   - `Client.cs TryToAuthenticate()`: set `result.ErrorLogs =
+     Logger.GetErrorLogs()` (and ideally push `ex.Message` into it) in both
+     `catch` blocks before returning, so a thrown auth exception isn't
+     silently swallowed.
+   - `UploadEndpoints.cs`: `uploadResult.ErrorLogs?.LastOrDefault()` (null-
+     safe) as a belt-and-suspenders fix regardless of the above.
+2. Rebuild + redeploy on `linux-bot`, re-run the same isolated real-
+   credentials test used before (decrypt real GarminCredential, POST
+   directly to the Funnel URL — never touches the live app's
+   `GARMIN_PROXY_URL` or marks anything synced).
+3. Read whatever real error comes back this time:
+   - Bot-detection / CAPTCHA / blocked-IP → self-hosting from linux-bot's
+     IP may not be viable regardless of code fixes; not worth chasing
+     further for a personal-scale tool.
+   - A genuine, fixable auth bug → worth it, and worth upstreaming as a PR
+     to lswiderski's repo (keeps us on the official image going forward
+     instead of maintaining a fork).
+4. Either way, post the root-cause finding as a comment on issue #15 —
+   costs nothing, helps the maintainer, and might get it fixed upstream
+   before we'd otherwise revisit this.
+5. `GARMIN_PROXY_URL` / prod stays on the current working third-party proxy
+   through all of this — same "isolated test, don't touch what works"
+   discipline as the first YAGCC investigation.
+
+Not started — this is the plan, pending a go-ahead to actually patch/build.
+
 ## Design audit vs bulma.io/documentation/elements — DONE
 
 User asked for a full pass: read every element on
