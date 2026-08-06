@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Lives outside pages/ on purpose — see forgot-password.test.js in this same
+// directory for why.
+
 const mockUpdate = vi.fn();
 const mockFindValidResetToken = vi.fn();
 const mockConsumeResetToken = vi.fn();
@@ -16,7 +19,7 @@ vi.mock('bcryptjs', () => ({
     default: { hash: (...args) => mockBcryptHash(...args) },
 }));
 
-const { default: handler } = await import('./reset-password');
+const { default: handler } = await import('../../../pages/api/auth/reset-password');
 
 function mockReqRes({ method = 'POST', body = {} } = {}) {
     const req = { method, body };

@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Lives outside pages/ on purpose — Next.js's Pages Router treats every file
+// under pages/api/ as a deployable route regardless of test intent, so a
+// forgot-password.test.js sitting next to forgot-password.js was showing up as
+// its own live serverless function (ƒ /api/auth/forgot-password.test) in the
+// build output.
+
 const mockFindUnique = vi.fn();
 const mockCreateResetToken = vi.fn();
 const mockSendPasswordResetEmail = vi.fn();
@@ -14,7 +20,7 @@ vi.mock('../../../lib/email', () => ({
     sendPasswordResetEmail: (...args) => mockSendPasswordResetEmail(...args),
 }));
 
-const { default: handler } = await import('./forgot-password');
+const { default: handler } = await import('../../../pages/api/auth/forgot-password');
 
 function mockReqRes({ method = 'POST', body = {} } = {}) {
     const req = { method, body, headers: { host: 'web-body-composition-three.vercel.app' } };
