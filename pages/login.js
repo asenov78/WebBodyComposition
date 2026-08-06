@@ -51,8 +51,13 @@ export default function LoginPage() {
         // no extra markup needed. On desktop the two columns sit side by side;
         // .login-info-column's order:-1 (globals.css, min-width:1024px) moves the
         // info panel to the visual left without reordering the DOM.
-        <div className='columns is-centered'>
-            <div className='column is-narrow' style={{ width: '24rem' }}>
+        // is-align-items-stretch on the row + is-flex-direction-column on each
+        // column + is-flex-grow-1 on each box: the box (not just the column div)
+        // expands to fill whatever height the row settles on, so both boxes end
+        // at the same bottom edge regardless of how much content is in each —
+        // instead of each column just sizing to its own natural content height.
+        <div className='columns is-centered is-align-items-stretch'>
+            <div className='column is-narrow is-flex is-flex-direction-column' style={{ width: '22rem' }}>
                 {/* Matches the info column's hero below (same is-small hero) so
                     both columns start with the same visual weight instead of a
                     plain heading next to a colored banner. */}
@@ -61,7 +66,7 @@ export default function LoginPage() {
                         <p className='title is-5 has-text-centered'>Log In</p>
                     </div>
                 </section>
-                <div className='box'>
+                <div className='box is-flex-grow-1'>
                     <form onSubmit={handleSubmit}>
                         <div className='field'>
                             <label className='label'>Email address</label>
@@ -113,7 +118,7 @@ export default function LoginPage() {
                 </div>
             </div>
 
-            <div className='column is-narrow login-info-column' style={{ width: '24rem' }}>
+            <div className='column is-narrow login-info-column is-flex is-flex-direction-column' style={{ width: '30rem' }}>
                 {/* Bulma's Hero component — what the app actually does, for anyone
                     landing here without context. */}
                 <section className='hero is-primary is-small is-radiusless block' style={{ borderRadius: '6px' }}>
@@ -126,9 +131,9 @@ export default function LoginPage() {
                 {/* Same box+chart the real dashboard uses (pages/index.js), fed sample
                     data — a plausible trend line explains "what this tracks" faster
                     than another paragraph, before there's any real data to show.
-                    Kept short on purpose — matches the login box's height instead
-                    of towering over it. */}
-                <div className='box mb-0'>
+                    is-flex-grow-1 (see comment above) fills it out to match the
+                    login box's height instead of leaving a gap or overflowing. */}
+                <div className='box mb-0 is-flex-grow-1 is-flex is-flex-direction-column is-justify-content-center'>
                     <WeightChart series={SAMPLE_SERIES} />
                     <p className='has-text-centered is-size-7 has-text-grey mt-3 mb-0'>
                         Sample data — connect once, syncs automatically after that.
