@@ -35,6 +35,22 @@ export default function LoginPage() {
     return (
         <div className='columns is-centered'>
             <div className='column is-narrow' style={{ width: '24rem' }}>
+                {/* Bulma's Hero component — what the app actually does, for anyone
+                    landing here without context. */}
+                <section className='hero is-primary is-small is-radiusless block' style={{ borderRadius: '6px' }}>
+                    <div className='hero-body'>
+                        <p className='title is-5'>Web Body Composition</p>
+                        <p className='subtitle is-6'>Your Xiaomi/Yunmai scale → Garmin Connect, automatically.</p>
+                        <div className='content is-size-7 mt-3 mb-0'>
+                            <ul>
+                                <li>Connect once — Xiaomi Cloud and Garmin stay linked to your account.</li>
+                                <li>New weigh-ins sync in the background, with the real date — not &quot;today&quot;.</li>
+                                <li>Credentials are encrypted and stored server-side, not in your browser.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
                 <h1 className='title is-4 has-text-centered'>Log In</h1>
                 <div className='box'>
                     <form onSubmit={handleSubmit}>

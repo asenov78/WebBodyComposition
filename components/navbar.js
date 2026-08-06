@@ -80,6 +80,10 @@ export default function Navbar() {
                             >
                                 {theme === 'dark' ? '☀️' : theme === 'light' ? '🌙' : '🌓'}
                             </button>
+                            {/* Only shown once authenticated — logged-out visitors are always
+                                on /login or /register already (middleware.js redirects them
+                                there), and both pages have their own Log In/Register links,
+                                so repeating them here was redundant. */}
                             {status === 'authenticated' && (
                                 <>
                                     <span className="navbar-item px-0 has-text-white-ter is-size-7">{session.user?.email}</span>
@@ -87,16 +91,6 @@ export default function Navbar() {
                                         className="button is-light is-small">
                                         Log Out
                                     </a>
-                                </>
-                            )}
-                            {status === 'unauthenticated' && (
-                                <>
-                                    <Link href="/login" onClick={closeMenu} className="button is-light is-small">
-                                        Log In
-                                    </Link>
-                                    <Link href="/register" onClick={closeMenu} className="button is-light is-small">
-                                        Register
-                                    </Link>
                                 </>
                             )}
                         </div>
