@@ -36,12 +36,14 @@ export default function Navbar() {
         <nav className="navbar is-primary" role="navigation" aria-label="main navigation">
             <div className="navbar-brand">
                 <Link href="/" passHref onClick={closeMenu} className="navbar-item">
-                    <Image
-                        src={scaleIcon}
-                        alt="scale logo"
-                        width={32}
-                        height={32}
-                    />
+                    <figure className="image is-32x32">
+                        <Image
+                            src={scaleIcon}
+                            alt="scale logo"
+                            width={32}
+                            height={32}
+                        />
+                    </figure>
                     <span className="ml-2 has-text-weight-semibold">Web Body Composition</span>
                 </Link>
 

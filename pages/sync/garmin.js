@@ -144,11 +144,20 @@ export default function Garmin() {
                         {connection.loading && <p className="has-text-centered has-text-grey mt-4">Checking Garmin connection…</p>}
 
                         {!connection.loading && connection.connected && (
-                            <div className="has-text-centered mt-4">
-                                <p>✅ Garmin connected as <strong>{connection.email}</strong></p>
-                                <a href="#" className="is-size-7" onClick={(e) => { e.preventDefault(); disconnect(); }}>
-                                    Disconnect / use a different account
-                                </a>
+                            <div className="level is-mobile mt-4">
+                                <div className="level-left">
+                                    <div className="level-item">
+                                        {/* Bulma's Delete element instead of a plain text link. */}
+                                        <button
+                                            type="button"
+                                            className="delete mr-2"
+                                            aria-label="Disconnect Garmin"
+                                            title="Disconnect / use a different account"
+                                            onClick={(e) => { e.preventDefault(); disconnect(); }}
+                                        />
+                                        <p>✅ Garmin connected as <strong>{connection.email}</strong></p>
+                                    </div>
+                                </div>
                             </div>
                         )}
 

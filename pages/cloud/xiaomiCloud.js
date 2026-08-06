@@ -425,14 +425,26 @@ export default function XiaomiCloud() {
                 stays inside it (not a detached form= reference) so it keeps working
                 whether or not the detail fields below are expanded. */}
             {!isLoadingConnection && !isPollingPassToken && (
-                <form onSubmit={submitMeasurements} className='box mb-5'>
+                <form onSubmit={submitMeasurements} className='box block'>
                     {isSavedServerSide && (
                         <div className='level is-mobile mb-3'>
                             <div className='level-left'>
                                 <div className='level-item'>
-                                    <div>
-                                        <p className='has-text-weight-semibold'>✅ Connected to Xiaomi Cloud</p>
-                                        <p className='is-size-7 has-text-grey mt-1'>Account-wide — works from any device, no need to reconnect.</p>
+                                    <div className='is-flex is-align-items-flex-start'>
+                                        {/* Bulma's Delete element — the documented affordance for
+                                            "remove/dismiss this", used here for "disconnect" instead
+                                            of a plain text link. */}
+                                        <button
+                                            type='button'
+                                            className='delete mt-1 mr-2'
+                                            aria-label='Disconnect Xiaomi Cloud'
+                                            title='Disconnect / use a different account'
+                                            onClick={(e) => { e.preventDefault(); disconnectXiaomi(); }}
+                                        />
+                                        <div>
+                                            <p className='has-text-weight-semibold'>✅ Connected to Xiaomi Cloud</p>
+                                            <p className='is-size-7 has-text-grey mt-1'>Account-wide — works from any device, no need to reconnect.</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -451,7 +463,7 @@ export default function XiaomiCloud() {
                     )}
 
                     {isSavedServerSide && (
-                        <div className='field is-grouped is-align-items-center mb-3'>
+                        <div className='field mb-3'>
                             <div className='control'>
                                 <button
                                     type='button'
@@ -461,13 +473,6 @@ export default function XiaomiCloud() {
                                     {showConnectionDetails ? 'Hide' : 'Show'} connection details
                                 </button>
                             </div>
-                            {!showConnectionDetails && (
-                                <div className='control'>
-                                    <a href='#' className='is-size-7 has-text-danger' onClick={(e) => { e.preventDefault(); disconnectXiaomi(); }}>
-                                        Disconnect
-                                    </a>
-                                </div>
-                            )}
                         </div>
                     )}
 
@@ -505,7 +510,7 @@ export default function XiaomiCloud() {
                         </div>
                     </div>
 
-                    <div className='field is-grouped is-align-items-center mb-4'>
+                    <div className='field mb-4'>
                         <div className='control'>
                             <button
                                 type='button'
@@ -516,13 +521,6 @@ export default function XiaomiCloud() {
                                 {isGettingPassToken ? 'Getting pass token...' : 'Get Pass Token (QR login)'}
                             </button>
                         </div>
-                        {isSavedServerSide && (
-                            <div className='control'>
-                                <a href='#' className='is-size-7 has-text-danger' onClick={(e) => { e.preventDefault(); disconnectXiaomi(); }}>
-                                    Disconnect / use a different account
-                                </a>
-                            </div>
-                        )}
                     </div>
 
                     <div className='columns'>

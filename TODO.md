@@ -63,6 +63,45 @@ Watch [issue #15](https://github.com/lswiderski/yet-another-garmin-connect-clien
 same real-credentials test, and flip `GARMIN_PROXY_URL` in Vercel prod if it
 passes.
 
+## Design audit vs bulma.io/documentation/elements — DONE
+
+User asked for a full pass: read every element on
+[bulma.io/documentation/elements](https://bulma.io/documentation/elements/)
+and use the real ones instead of inventing custom combos. Checklist:
+
+- [x] Stat tiles (`pages/index.js`) — were `.box` + a raw
+  `has-background-X-light` helper with no matching text color (illegible
+  pale-on-pale in dark mode). → real **Notification** element
+  (`notification is-X is-light`), which pairs bg+text correctly per Bulma's
+  own design.
+- [x] Navbar buttons — were `is-primary is-outlined` on an `is-primary` bar
+  (invisible, same hue as background). → `is-light`, matching Bulma's own
+  basic-navbar doc example (colored bar + is-light buttons).
+- [x] Navbar "Mi Cloud Connector (S400)" link — removed, redundant with the
+  dashboard's connection card.
+- [x] Navbar logo — raw `next/image` with manual width/height, not wrapped
+  in Bulma's **Image** element. → `<figure class="image is-32x32">`.
+- [x] Page-section spacing (`pages/index.js`) — was manual `mb-2`/`mb-5`/
+  `mb-6` utility stacking on every section, fighting the bottom-margin
+  `.box`/`.notification` already inherit from Bulma's `%block` placeholder.
+  → wrapped each top-level section in the **Block** element (`class="block"`)
+  for the canonical 1.5rem rhythm instead of ad-hoc numbers.
+- [x] "Disconnect" links (`xiaomiCloud.js`, `sync/garmin.js`) — were plain
+  `<a>` text. → Bulma's **Delete** element (`button class="delete"`) next
+  to the connected-status line — it's literally the documented affordance
+  for "remove/dismiss this thing", closer to the actual action than a text
+  link.
+- Left as-is (already correct, or a documented exception):
+  - `.table`, `.tag`, `.field`/`.control`/`.input`, `.level`, `.buttons` —
+    already the real elements/components, not homemade.
+  - QR code image frame (`xiaomiCloud.js`) — deliberately fixed light
+    background regardless of theme, documented inline (a QR code needs a
+    light quiet-zone to scan, independent of page theme).
+  - Emoji used as inline status icons (✅⏳🎉⚠️) — left as plain text, not
+    forced into `.icon`/`.icon-text` wrappers; that helper is sized for
+    icon-font glyphs and wrapping emoji in it added visual noise without a
+    real correctness gain.
+
 ## Design: Bulma — DONE
 
 Switched the whole UI from ad-hoc Tailwind utility classes to

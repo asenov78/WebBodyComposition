@@ -59,7 +59,11 @@ export default function Home() {
 
   return (
     <div className='container' style={{ maxWidth: '48rem' }}>
-      <div className='has-text-centered mb-5'>
+      {/* Bulma's Block element (class="block") between top-level sections, not
+          arbitrary mb-2/mb-5/mb-6 utility stacking — .box/.notification already
+          inherit a consistent 1.5rem bottom margin from Bulma's %block
+          placeholder, so this keeps the rhythm canonical instead of ad-hoc. */}
+      <div className='block has-text-centered'>
         <h1 className='title is-3'>
           Hello, {session?.user?.email?.split('@')[0] ?? 'there'}! 👋
         </h1>
@@ -67,7 +71,7 @@ export default function Home() {
       </div>
 
       {/* Stat tiles */}
-      <div className='columns is-mobile is-multiline mb-2'>
+      <div className='block columns is-mobile is-multiline'>
         <StatTile label='Current weight' value={lastWeight ? `${lastWeight.toFixed(1)} kg` : '—'} color='link' />
         <StatTile label='Synced to Garmin' value={progress.loading ? '…' : `${progress.synced}/${progress.totalMeasurements}`} color='success' />
         <StatTile label='Still pending' value={progress.loading ? '…' : progress.remaining} color={progress.remaining > 0 ? 'warning' : 'success'} />
@@ -75,7 +79,7 @@ export default function Home() {
       </div>
 
       {/* Weight trend chart */}
-      <div className='box mb-5'>
+      <div className='block box'>
         <h2 className='title is-6 has-text-grey-dark mb-3'>Weight trend</h2>
         {series.loading ? (
           <p className='has-text-grey is-size-7'>Loading…</p>
@@ -85,7 +89,7 @@ export default function Home() {
       </div>
 
       {/* Connection cards */}
-      <div className='columns is-mobile mb-2'>
+      <div className='block columns is-mobile'>
         <ConnectionCard
           title='Xiaomi Cloud (S400)'
           loading={xiaomi.loading}
@@ -105,14 +109,14 @@ export default function Home() {
       </div>
 
       {progress.remaining > 0 && !progress.loading && (
-        <div className='notification is-info is-light is-flex is-justify-content-space-between is-align-items-center is-flex-wrap-wrap mb-5'>
+        <div className='block notification is-info is-light is-flex is-justify-content-space-between is-align-items-center is-flex-wrap-wrap'>
           <span>⏳ Auto-syncing in the background — {progress.remaining} measurement{progress.remaining === 1 ? '' : 's'} still pending.</span>
           <Link href='/sync/garmin-bulk' className='has-text-weight-semibold'>Sync now →</Link>
         </div>
       )}
 
       {/* Recent syncs */}
-      <div className='mb-6'>
+      <div className='block'>
         <h2 className='title is-6 has-text-grey-dark mb-2'>Recent syncs</h2>
         {measurements.loading && <p className='has-text-grey is-size-7'>Loading…</p>}
         {!measurements.loading && measurements.items.length === 0 && (
