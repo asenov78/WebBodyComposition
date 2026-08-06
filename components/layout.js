@@ -1,8 +1,18 @@
 import Head from 'next/head'
+import { useRouter } from 'next/router'
 import Navbar from './navbar'
 import Footer from './footer'
 
+// The login page has its own hero banner (name + logo already shown there,
+// nicely centered) — the navbar's logo+name on the left duplicated that
+// clumsily. Hidden here rather than on other auth pages since those don't
+// have the same duplication problem yet.
+const NO_NAVBAR_PATHS = ['/login'];
+
 export default function Layout({ children }) {
+    const router = useRouter();
+    const showNavbar = !NO_NAVBAR_PATHS.includes(router.pathname);
+
     return (
         <>
             <Head>
@@ -16,7 +26,7 @@ export default function Layout({ children }) {
                 <link rel="icon" href="/favicon.ico" />
             </Head>
             <div className='app-shell'>
-                <Navbar />
+                {showNavbar && <Navbar />}
                 <main className='app-main section'>
                     {children}
                 </main>

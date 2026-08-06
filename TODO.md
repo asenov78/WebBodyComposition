@@ -1,5 +1,14 @@
 # TODO
 
+## Design our own logo
+
+Current logo (`public/weighing-scale-64.png`, shown in the navbar) is a
+generic stock weighing-scale icon carried over from the forked upstream
+project — not something we made for this app. Navbar logo hidden on
+/login for now (separate fix, see below) but the navbar still uses it
+everywhere else. Not started — needs an actual design pass, not just a
+different stock icon.
+
 ## Password reset email — DONE (Gmail SMTP, not Resend)
 
 Resend needed a verified custom domain even for its own
