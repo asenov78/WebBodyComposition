@@ -3,7 +3,7 @@
 export default function WeightChart({ series }) {
     if (!series || series.length < 2) {
         return (
-            <div className="has-text-centered has-text-grey is-size-7 py-6" style={{ border: '1px dashed #dbdbdb', borderRadius: '6px' }}>
+            <div className="has-text-centered has-text-grey is-size-7 py-6" style={{ border: '1px dashed var(--bulma-border)', borderRadius: '6px' }}>
                 Not enough synced data yet for a trend line (need at least 2 points).
             </div>
         );
@@ -43,7 +43,13 @@ export default function WeightChart({ series }) {
 
     const formatShortDate = (date) => new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' }).format(date);
 
-    const lineColor = '#485fc7'; // Bulma $link
+    // CSS custom properties, not hardcoded hex — Bulma redefines these under
+    // prefers-color-scheme: dark, so the chart follows the OS/browser theme
+    // instead of staying light-mode colors on a dark page.
+    const lineColor = 'var(--bulma-link)';
+    const gridColor = 'var(--bulma-border-weak)';
+    const axisTextColor = 'var(--bulma-text-weak)';
+    const dotRingColor = 'var(--bulma-scheme-main)';
     const deltaColor = delta > 0 ? 'has-text-danger' : delta < 0 ? 'has-text-success' : 'has-text-grey';
 
     return (
@@ -71,8 +77,8 @@ export default function WeightChart({ series }) {
                     const value = yMax - (weightSpan / gridLines) * i;
                     return (
                         <g key={i}>
-                            <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="#e5e7eb" strokeWidth="1" />
-                            <text x={padding.left - 6} y={y + 3} textAnchor="end" fontSize="10" fill="#9ca3af">{value.toFixed(0)}</text>
+                            <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke={gridColor} strokeWidth="1" />
+                            <text x={padding.left - 6} y={y + 3} textAnchor="end" fontSize="10" fill={axisTextColor}>{value.toFixed(0)}</text>
                         </g>
                     );
                 })}
@@ -82,11 +88,11 @@ export default function WeightChart({ series }) {
 
                 {points.map((p, i) => (
                     <circle key={i} cx={xFor(p.date)} cy={yFor(p.weight)} r={i === points.length - 1 ? 4 : 2.5}
-                        fill={lineColor} stroke="white" strokeWidth={i === points.length - 1 ? 1.5 : 0} />
+                        fill={lineColor} stroke={dotRingColor} strokeWidth={i === points.length - 1 ? 1.5 : 0} />
                 ))}
 
-                <text x={padding.left} y={height - 8} fontSize="10" fill="#9ca3af">{formatShortDate(first.date)}</text>
-                <text x={width - padding.right} y={height - 8} textAnchor="end" fontSize="10" fill="#9ca3af">{formatShortDate(last.date)}</text>
+                <text x={padding.left} y={height - 8} fontSize="10" fill={axisTextColor}>{formatShortDate(first.date)}</text>
+                <text x={width - padding.right} y={height - 8} textAnchor="end" fontSize="10" fill={axisTextColor}>{formatShortDate(last.date)}</text>
             </svg>
         </div>
     );

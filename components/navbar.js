@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSession, signOut } from 'next-auth/react'
@@ -7,6 +7,28 @@ import scaleIcon from '../public/weighing-scale-64.png'
 export default function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { data: session, status } = useSession();
+    // Bulma's dark mode follows the OS/browser prefers-color-scheme by default —
+    // this lets the user override that explicitly instead, via Bulma's documented
+    // data-theme attribute (https://bulma.io/documentation/features/dark-mode/).
+    // Starts null (no override, i.e. "follow system") until we know what's stored.
+    const [theme, setTheme] = useState(null);
+
+    useEffect(() => {
+        const stored = window.localStorage.getItem('theme');
+        if (stored === 'light' || stored === 'dark') {
+            setTheme(stored);
+            document.documentElement.setAttribute('data-theme', stored);
+        }
+    }, []);
+
+    const toggleTheme = () => {
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const current = theme || (systemPrefersDark ? 'dark' : 'light');
+        const next = current === 'dark' ? 'light' : 'dark';
+        setTheme(next);
+        window.localStorage.setItem('theme', next);
+        document.documentElement.setAttribute('data-theme', next);
+    };
 
     function closeMenu() { setIsMenuOpen(false) };
 
@@ -45,25 +67,38 @@ export default function Navbar() {
 
                 <div className="navbar-end">
                     <div className="navbar-item">
-                        {status === 'authenticated' && (
-                            <div className="buttons">
-                                <span className="navbar-item px-0 has-text-white-ter is-size-7">{session.user?.email}</span>
-                                <a href="#" onClick={(e) => { e.preventDefault(); closeMenu(); signOut(); }}
-                                    className="button is-primary is-outlined is-small">
-                                    Log Out
-                                </a>
-                            </div>
-                        )}
-                        {status === 'unauthenticated' && (
-                            <div className="buttons">
-                                <Link href="/login" onClick={closeMenu} className="button is-primary is-outlined is-small">
-                                    Log In
-                                </Link>
-                                <Link href="/register" onClick={closeMenu} className="button is-light is-small">
-                                    Register
-                                </Link>
-                            </div>
-                        )}
+                        {/* Single Bulma "buttons" group — its own spacing rules handle the
+                            gaps, so nothing here needs a manual margin/gap style. */}
+                        <div className="buttons is-align-items-center">
+                            <button
+                                type="button"
+                                onClick={toggleTheme}
+                                className="button is-primary is-outlined is-small"
+                                aria-label="Toggle light/dark theme"
+                                title="Toggle light/dark theme"
+                            >
+                                {theme === 'dark' ? '☀️' : theme === 'light' ? '🌙' : '🌓'}
+                            </button>
+                            {status === 'authenticated' && (
+                                <>
+                                    <span className="navbar-item px-0 has-text-white-ter is-size-7">{session.user?.email}</span>
+                                    <a href="#" onClick={(e) => { e.preventDefault(); closeMenu(); signOut(); }}
+                                        className="button is-primary is-outlined is-small">
+                                        Log Out
+                                    </a>
+                                </>
+                            )}
+                            {status === 'unauthenticated' && (
+                                <>
+                                    <Link href="/login" onClick={closeMenu} className="button is-primary is-outlined is-small">
+                                        Log In
+                                    </Link>
+                                    <Link href="/register" onClick={closeMenu} className="button is-light is-small">
+                                        Register
+                                    </Link>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

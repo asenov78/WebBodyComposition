@@ -163,20 +163,30 @@ function StatTile({ label, value, color }) {
 function ConnectionCard({ title, loading, connected, subtitle, href, cta }) {
   return (
     <div className='column'>
-      <div className='box is-flex is-justify-content-space-between is-align-items-center'>
-        <div>
-          <p className='has-text-weight-semibold'>{title}</p>
-          {loading ? (
-            <p className='is-size-7 has-text-grey mt-1'>Checking…</p>
-          ) : (
-            <p className={`is-size-7 mt-1 ${connected ? 'has-text-success' : 'has-text-grey'}`}>
-              {connected ? `✅ ${subtitle || 'Connected'}` : '⚪ Not connected'}
-            </p>
-          )}
+      <div className='box'>
+        <div className='level is-mobile mb-0'>
+          <div className='level-left'>
+            <div className='level-item'>
+              <div>
+                <p className='has-text-weight-semibold'>{title}</p>
+                {loading ? (
+                  <p className='is-size-7 has-text-grey mt-1'>Checking…</p>
+                ) : (
+                  <p className={`is-size-7 mt-1 ${connected ? 'has-text-success' : 'has-text-grey'}`}>
+                    {connected ? `✅ ${subtitle || 'Connected'}` : '⚪ Not connected'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className='level-right'>
+            <div className='level-item'>
+              <Link href={href} className='has-text-weight-semibold is-size-7' style={{ whiteSpace: 'nowrap' }}>
+                {cta} →
+              </Link>
+            </div>
+          </div>
         </div>
-        <Link href={href} className='has-text-weight-semibold is-size-7' style={{ whiteSpace: 'nowrap' }}>
-          {cta} →
-        </Link>
       </div>
     </div>
   );

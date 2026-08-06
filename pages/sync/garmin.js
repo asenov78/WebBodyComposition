@@ -200,16 +200,24 @@ export default function Garmin() {
                             </div>
                         )}
 
-                        <div className='is-flex is-align-items-center mt-5'>
-                            <Link href="/" passHref>
-                                <button type="button" className='button is-light mr-auto'>
-                                    &lt; Back
-                                </button>
-                            </Link>
-                            <button type="submit" disabled={isSubmitting || connection.loading}
-                                className='button is-link ml-auto'>
-                                {isSubmitting ? 'Sending…' : 'Send to Garmin Connect'}
-                            </button>
+                        <div className='level is-mobile mt-5'>
+                            <div className='level-left'>
+                                <div className='level-item'>
+                                    <Link href="/" passHref>
+                                        <button type="button" className='button is-light'>
+                                            &lt; Back
+                                        </button>
+                                    </Link>
+                                </div>
+                            </div>
+                            <div className='level-right'>
+                                <div className='level-item'>
+                                    <button type="submit" disabled={isSubmitting || connection.loading}
+                                        className='button is-link'>
+                                        {isSubmitting ? 'Sending…' : 'Send to Garmin Connect'}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>

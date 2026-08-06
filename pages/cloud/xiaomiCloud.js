@@ -427,40 +427,52 @@ export default function XiaomiCloud() {
             {!isLoadingConnection && !isPollingPassToken && (
                 <form onSubmit={submitMeasurements} className='box mb-5'>
                     {isSavedServerSide && (
-                        <div className='is-flex is-justify-content-space-between is-align-items-center is-flex-wrap-wrap mb-3'>
-                            <div>
-                                <p className='has-text-weight-semibold'>✅ Connected to Xiaomi Cloud</p>
-                                <p className='is-size-7 has-text-grey mt-1'>Account-wide — works from any device, no need to reconnect.</p>
+                        <div className='level is-mobile mb-3'>
+                            <div className='level-left'>
+                                <div className='level-item'>
+                                    <div>
+                                        <p className='has-text-weight-semibold'>✅ Connected to Xiaomi Cloud</p>
+                                        <p className='is-size-7 has-text-grey mt-1'>Account-wide — works from any device, no need to reconnect.</p>
+                                    </div>
+                                </div>
                             </div>
-                            <button
-                                type='submit'
-                                disabled={!isGetMeasurementsEnabled || isSubmitting}
-                                className='button is-link'
-                            >
-                                {isSubmitting ? 'Checking…' : 'Get Measurements'}
-                            </button>
+                            <div className='level-right'>
+                                <div className='level-item'>
+                                    <button
+                                        type='submit'
+                                        disabled={!isGetMeasurementsEnabled || isSubmitting}
+                                        className='button is-link'
+                                    >
+                                        {isSubmitting ? 'Checking…' : 'Get Measurements'}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
 
                     {isSavedServerSide && (
-                        <div className='is-flex is-align-items-center mb-3' style={{ gap: '1rem' }}>
-                            <button
-                                type='button'
-                                onClick={() => setShowConnectionDetails((v) => !v)}
-                                className='button is-text is-small p-0'
-                            >
-                                {showConnectionDetails ? 'Hide' : 'Show'} connection details
-                            </button>
+                        <div className='field is-grouped is-align-items-center mb-3'>
+                            <div className='control'>
+                                <button
+                                    type='button'
+                                    onClick={() => setShowConnectionDetails((v) => !v)}
+                                    className='button is-text is-small p-0'
+                                >
+                                    {showConnectionDetails ? 'Hide' : 'Show'} connection details
+                                </button>
+                            </div>
                             {!showConnectionDetails && (
-                                <a href='#' className='is-size-7 has-text-danger' onClick={(e) => { e.preventDefault(); disconnectXiaomi(); }}>
-                                    Disconnect
-                                </a>
+                                <div className='control'>
+                                    <a href='#' className='is-size-7 has-text-danger' onClick={(e) => { e.preventDefault(); disconnectXiaomi(); }}>
+                                        Disconnect
+                                    </a>
+                                </div>
                             )}
                         </div>
                     )}
 
                     {showDetailFields && (
-                    <div className={isSavedServerSide ? 'pt-4' : ''} style={isSavedServerSide ? { borderTop: '1px solid #f0f0f0' } : undefined}>
+                    <div className={isSavedServerSide ? 'pt-4' : ''} style={isSavedServerSide ? { borderTop: '1px solid var(--bulma-border-weak)' } : undefined}>
                     {!isSavedServerSide && (
                         <p className='is-size-7 has-text-grey mb-4'>Connect once — scan the QR code below, and it&apos;s remembered on your account from then on.</p>
                     )}
@@ -596,10 +608,13 @@ export default function XiaomiCloud() {
                     )}
                     {qrCodeBase64 && (
                         <figure className='image is-inline-block mb-3'>
+                            {/* Deliberately fixed light background, not a theme var — a QR
+                                code needs a light quiet-zone to scan reliably regardless of
+                                which theme the page is in. */}
                             <img
                                 src={`data:image/png;base64,${qrCodeBase64}`}
                                 alt='Xiaomi login QR code'
-                                style={{ maxWidth: '220px', border: '1px solid #f0f0f0', borderRadius: '6px', padding: '0.5rem' }}
+                                style={{ maxWidth: '220px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '6px', padding: '0.5rem' }}
                             />
                         </figure>
                     )}
@@ -673,20 +688,27 @@ export default function XiaomiCloud() {
                 </div>
             )}
 
-            <div className='is-flex is-align-items-center is-flex-wrap-wrap mb-6' style={{ gap: '0.75rem' }}>
-                <Link href='/' passHref>
-                    <button type='button' className='button is-light'>
-                        &lt; Back
-                    </button>
-                </Link>
-
-                {fetchSummary && !isPollingPassToken && (
-                    <Link href='/sync/garmin-bulk' passHref className='ml-auto'>
-                        <button type='button' className='button is-success'>
-                            Continue → Connect to Garmin
-                        </button>
-                    </Link>
-                )}
+            <div className='level is-mobile mb-6'>
+                <div className='level-left'>
+                    <div className='level-item'>
+                        <Link href='/' passHref>
+                            <button type='button' className='button is-light'>
+                                &lt; Back
+                            </button>
+                        </Link>
+                    </div>
+                </div>
+                <div className='level-right'>
+                    {fetchSummary && !isPollingPassToken && (
+                        <div className='level-item'>
+                            <Link href='/sync/garmin-bulk' passHref>
+                                <button type='button' className='button is-success'>
+                                    Continue → Connect to Garmin
+                                </button>
+                            </Link>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     )
