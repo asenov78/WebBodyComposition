@@ -150,10 +150,16 @@ export default function Home() {
 }
 
 function StatTile({ label, value, color }) {
+  // Bulma's Notification element (bulma.io/documentation/elements/notification),
+  // not a box + a raw has-background-*-light helper — the notification component
+  // sets a matched background/text pair per color, so it stays readable in both
+  // themes instead of pale-background-with-pale-text. "light" is itself a color
+  // here (the neutral gray one), so it doesn't get a second is-light appended.
+  const colorClass = color === 'light' ? 'is-light' : `is-${color} is-light`;
   return (
     <div className='column'>
-      <div className={`box has-text-centered py-3 has-background-${color}-light`}>
-        <p className='is-size-7 has-text-weight-medium has-text-grey-dark mb-1'>{label}</p>
+      <div className={`notification ${colorClass} has-text-centered py-3 mb-0`}>
+        <p className='is-size-7 has-text-weight-medium mb-1'>{label}</p>
         <p className='title is-5 mb-0'>{value}</p>
       </div>
     </div>
