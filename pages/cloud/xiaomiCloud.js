@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import useLocalStorageState from 'use-local-storage-state';
+import { parseWeightRecords } from '../../lib/xiaomiWeightParsing';
 
 const regionOptions = [
     { value: 'cn', label: 'China' },
@@ -147,29 +148,6 @@ export default function XiaomiCloud() {
             return JSON.parse(responseText);
         } catch {
             return responseText;
-        }
-    };
-
-    const parseWeightRecords = (responseValue) => {
-        if (typeof responseValue !== 'string') {
-            return Array.isArray(responseValue) ? responseValue : [];
-        }
-
-        const trimmedValue = responseValue.trim();
-
-        if (!trimmedValue) {
-            return [];
-        }
-
-        const normalizedValue = trimmedValue.startsWith("'") && trimmedValue.endsWith("'")
-            ? trimmedValue.slice(1, -1)
-            : trimmedValue;
-
-        try {
-            const parsedValue = JSON.parse(normalizedValue);
-            return Array.isArray(parsedValue) ? parsedValue : [];
-        } catch {
-            return [];
         }
     };
 
