@@ -1,6 +1,18 @@
+import crypto from 'crypto';
 import { prisma } from '../../../lib/prisma';
 import { fetchAndImportXiaomiWeights } from '../../../lib/xiaomiSync';
 import { syncPendingMeasurementsBatch } from '../../../lib/garminSync';
+
+// Constant-time compare — a plain `!==` leaks how many leading bytes matched via
+// response timing, in theory (impractical over the internet for a 32-byte secret,
+// but it's a one-line fix). Guard the length check first: timingSafeEqual throws
+// on mismatched buffer lengths rather than just returning false.
+function secretsMatch(a, b) {
+    if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) {
+        return false;
+    }
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 // Runs unattended (triggered by an external scheduler — see .github/workflows/sync-cron.yml
 // and TODO.md for why not Vercel's own Cron: Hobby plan caps it at once/day, too coarse).
@@ -12,8 +24,12 @@ const TIME_BUDGET_MS = 25000;
 const GARMIN_BATCH_PER_USER = 10;
 
 export default async function handler(req, res) {
-    const providedSecret = req.headers['x-cron-secret'] || req.query.secret;
-    if (!process.env.CRON_SECRET || providedSecret !== process.env.CRON_SECRET) {
+    // Header only — a query-param fallback used to exist here too, but URLs get
+    // written to server/proxy access logs and browser history, which a secret
+    // shouldn't. Nothing that calls this endpoint (linux-bot's crontab, the
+    // GitHub Actions workflow) ever used the query-param form anyway.
+    const providedSecret = req.headers['x-cron-secret'];
+    if (!process.env.CRON_SECRET || !secretsMatch(providedSecret, process.env.CRON_SECRET)) {
         return res.status(401).json({ error: 'Not authorized.' });
     }
 
