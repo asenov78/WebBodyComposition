@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react';
-import { useBodyCompositionContext } from '../../contexts/bodycomposition.context';
 
+// Used to read initial values from BodyCompositionContext, populated by the
+// (since-removed) Bluetooth scanner flow — nothing ever wrote to that context
+// in this fork, so every field always defaulted to 0 anyway. Plain useState(0)
+// is the same behavior with one less dependency.
 export default function Garmin() {
     const { status: authStatus } = useSession();
-    const { bodyComposition } = useBodyCompositionContext();
-    const [weight, setWeight] = useState(bodyComposition.weight ?? 0);
-    const [bmi, setBmi] = useState(bodyComposition.bmi ?? 0);
-    const [fat, setFat] = useState(bodyComposition.fat ?? 0);
-    const [muscleMass, setMuscleMass] = useState(bodyComposition.muscleMass ?? 0);
-    const [waterPercentage, setWaterPercentage] = useState(bodyComposition.waterPercentage ?? 0);
-    const [boneMass, setBoneMass] = useState(bodyComposition.boneMass ?? 0);
-    const [visceralFat, setVisceralFat] = useState(bodyComposition.visceralFat ?? 0);
-    const [metabolicAge, setMetabolicAge] = useState(bodyComposition.metabolicAge ?? 0);
-    const [bodyType, setBodyType] = useState(bodyComposition.bodyType ?? 0);
+    const [weight, setWeight] = useState(0);
+    const [bmi, setBmi] = useState(0);
+    const [fat, setFat] = useState(0);
+    const [muscleMass, setMuscleMass] = useState(0);
+    const [waterPercentage, setWaterPercentage] = useState(0);
+    const [boneMass, setBoneMass] = useState(0);
+    const [visceralFat, setVisceralFat] = useState(0);
+    const [metabolicAge, setMetabolicAge] = useState(0);
+    const [bodyType, setBodyType] = useState(0);
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
