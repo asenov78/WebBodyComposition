@@ -10,13 +10,16 @@ multi-user accounts, server-side storage of both cloud connections, and unattend
 background sync. See [`TODO.md`](TODO.md) for what's next (self-hosting the two
 external proxies this still depends on).
 
-**Live**: https://web-body-composition-three.vercel.app
+**Live**: https://scale.karolev.org (custom domain via Cloudflare; the Vercel-
+assigned `web-body-composition-three.vercel.app` still works too)
 
 ## How it works
 
 1. **Register / log in** (`/register`, `/login`) — email + password, `next-auth`
-   (Credentials provider, JWT sessions). Every page is auth-gated by `middleware.js`
-   except the auth pages and `/api/cron/*` (that one authenticates itself, see below).
+   (Credentials provider, JWT sessions), plus a "forgot password" email-link flow
+   (`/forgot-password` → `/reset-password?token=...`). Every page is auth-gated by
+   `middleware.js` except the auth pages and `/api/cron/*` (that one authenticates
+   itself, see below).
 2. **Connect Xiaomi Cloud** (`/cloud/xiaomiCloud`, "Mi Cloud Connector") — QR-code
    login against Xiaomi's account system (via a proxy, see below), then "Get
    Measurements" pulls your weight history. The connection (`userId` + `passToken`)
@@ -29,7 +32,7 @@ external proxies this still depends on).
    password again.
 4. **Sync** — pending (not-yet-synced) measurements get pushed to Garmin using each
    one's actual weigh-in date (not "today"). This happens two ways:
-   - **Automatically**, in the background, every ~10 minutes — see
+   - **Automatically**, in the background, every ~5 minutes — see
      [Automation](#automation) below. No browser needs to be open.
    - **On demand**, via the "Sync Now" button on `/sync/garmin-bulk` (useful right
      after connecting, or if you don't want to wait for the next scheduled run).
@@ -46,14 +49,19 @@ pending ones to Garmin. It's authenticated via a shared secret
 `middleware.js` explicitly excludes `/api/cron/*` from the login-required gate.
 
 **It's not triggered by Vercel's own Cron Jobs.** Vercel's Hobby plan caps Cron Jobs
-at once per day — too coarse for "keep going in the background." Instead,
-[`.github/workflows/sync-cron.yml`](.github/workflows/sync-cron.yml) runs on GitHub
-Actions every 10 minutes and just calls the endpoint over HTTPS. It also has a
+at once per day — too coarse for "keep going in the background." Primary trigger is
+a `crontab` entry on `linux-bot` (an always-on home machine) calling the endpoint
+every 5 minutes — GitHub Actions' `schedule` trigger was tried first but proved
+unreliable in practice (observed gaps of 1-3+ hours despite a 10-minute config, a
+known GitHub Actions limitation under load, not specific to this repo).
+[`.github/workflows/sync-cron.yml`](.github/workflows/sync-cron.yml) is kept as a
+secondary fallback (in case linux-bot itself is down) and still has a
 `workflow_dispatch` trigger for running it on demand from the Actions tab
 (`gh workflow run "Auto-sync Xiaomi -> Garmin"`).
 
-This means sync keeps running as long as GitHub Actions and Vercel are up —
-independent of your browser, your computer being on, or being logged into the app.
+This means sync keeps running as long as linux-bot (or, as fallback, GitHub Actions)
+and Vercel are up — independent of your browser, your computer being on, or being
+logged into the app.
 
 ### Why syncing happens in small batches, not all at once
 
@@ -71,8 +79,19 @@ picks up where it left off.
 - **Next.js 14** (Pages Router), **NextAuth v4** (Credentials + JWT, no adapter —
   see the comment in `pages/api/auth/[...nextauth].js` for why mixing an adapter in
   caused an intermittent post-login redirect loop).
+- **Bulma** for UI (real Bulma elements/components throughout — `box`, `field`/
+  `control`/`input`, `notification`, `level`, `delete`, etc. — not ad-hoc CSS; see
+  TODO.md for the design-audit pass). Dark mode is automatic
+  (`prefers-color-scheme`) with a manual override toggle in the navbar.
 - **Prisma 5 + Postgres** (Neon, via the Vercel-managed integration). Schema:
-  `User`, `GarminCredential`, `XiaomiCredential`, `Measurement`.
+  `User`, `GarminCredential`, `XiaomiCredential`, `Measurement`,
+  `PasswordResetToken`. `prisma db push` only (no `migrations/` — fine at this
+  scale, see TODO.md).
+- **Auth**: register/login (bcrypt-hashed passwords) plus a forgot-password email-
+  link flow (`pages/api/auth/{forgot,reset}-password.js`, `lib/passwordReset.js` —
+  tokens are SHA-256-hashed at rest, single-use, 1-hour expiry). Password-reset
+  email sends via Gmail SMTP (`lib/email.js`) — see TODO.md for the plan to move
+  this to Resend now that a real domain exists.
 - **Encryption**: `lib/encryption.js`, AES-256-GCM, key from `ENCRYPTION_KEY`.
   Garmin/Xiaomi credentials and tokens are stored as `iv:authTag:ciphertext`, never
   plaintext.
@@ -81,8 +100,13 @@ picks up where it left off.
   - `lib/garminSync.js` — `pushMeasurementToGarmin` (one record),
     `syncPendingMeasurementsBatch` (loops it with pacing/time-budget),
     `computeGarminTimeStamp` / `extractErrorMessage` (pure helpers, unit tested).
+    Proxy target is `GARMIN_PROXY_URL` (env, defaults to the third-party proxy) —
+    a self-hosted swap was tried and reverted same-day; see TODO.md for why.
   - `lib/xiaomiSync.js` — `fetchAndImportXiaomiWeights` (server-side equivalent of
     what the browser does on the Mi Cloud Connector page).
+  - `lib/xiaomiWeightParsing.js` — `parseWeightRecords`, shared by both the
+    browser-side fetch and the server-side one (no server-only deps, so it's safe
+    to import from client code too).
   - `lib/measurementImport.js` — `importMeasurementRecords` (dedup-on-import logic,
     shared by the client-driven import endpoint and the cron's Xiaomi fetch).
 
@@ -121,11 +145,16 @@ grep -E '^POSTGRES_PRISMA_URL|^POSTGRES_URL_NON_POOLING' .env.local > .env
 npm test
 ```
 
-[Vitest](https://vitest.dev), covering the `lib/` layer — the pure/isolable logic
-where the real bugs during development actually lived (timestamp unit mismatch,
-import dedup counting, error-message extraction). API routes aren't unit tested;
-they're thin wrappers around the tested `lib/` functions plus `getServerSession` /
-Prisma calls, verified manually against the real (Neon) database during development.
+[Vitest](https://vitest.dev), mainly covering the `lib/` layer — the pure/isolable
+logic where the real bugs during development actually lived (timestamp unit
+mismatch, import dedup counting, error-message extraction). Most API routes are
+thin wrappers around tested `lib/` functions plus `getServerSession`/Prisma calls,
+verified manually against the real (Neon) database during development — except the
+password-reset routes (`__tests__/api/auth/`), which do have dedicated mocked
+tests. Those live outside `pages/` on purpose: Next.js's Pages Router treats every
+file under `pages/api/` as a deployable route regardless of test intent, so a
+`*.test.js` sitting next to a route file was shipping as its own (empty) live
+serverless function.
 
 ## Deploying
 
@@ -147,16 +176,18 @@ the CLI doesn't accept all three in a single invocation).
 
 The rest of this section is preserved from the original single-user app for
 reference — some of it (Bluetooth scanning, FAQ, Android app, manual single-entry
-form) isn't part of this fork's menu anymore, but the underlying Bluetooth/Garmin
-integration code this was built from is still relevant background.
+form) isn't part of this fork's menu anymore. The Bluetooth-scanner code itself
+(`services/scanner.js`, `components/scanner.js`) was deleted from this fork (dead
+code, zero live importers — see TODO.md's architecture-review notes); the
+background below is kept for context on what the original upstream project did.
 
 ### iOS / iPadOS (iPhone/iPad)
 
 Neither Safari nor Chrome support the Web Bluetooth API on Apple devices (only on
 macOS does it work). An alternative browser like
 [Bluefy - Web BLE Browser](https://apps.apple.com/us/app/bluefy-web-ble-browser/id1492822055)
-is needed for the Bluetooth-scanning flow (not currently exposed in this fork's UI,
-but the code — `services/scanner.js`, `components/scanner.js` — is still in the repo).
+is needed for the Bluetooth-scanning flow in the original upstream project (not
+part of this fork).
 
 ### Android Native Application (original project)
 
