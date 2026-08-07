@@ -29,15 +29,16 @@ Executed one step at a time (build+test+commit+push+deploy per step):
 Final tally: 54/54 tests pass (was 47 at the start of this pass), build
 clean, 4 commits (one per step), all deployed to prod.
 
-## Recommended: switch password-reset email to Resend + verified subdomain
+## Password-reset email switched to Resend — DONE, 2026-08-07
 
-Now that `karolev.org` is owned (Cloudflare), Resend can be set up
-properly (e.g. `mail.karolev.org`, DNS records via the Cloudflare API
-access already used for `scale.karolev.org`) instead of Gmail SMTP.
-Better fit long-term: dedicated deliverability tracking, no personal-
-Gmail-account sending caps/ToS exposure for automated app mail. Not
-started — Gmail SMTP works fine currently, this is an improvement, not
-a fix.
+`karolev.org` turned out to already be verified in Resend (no subdomain
+setup or DNS wait needed) — sends from `noreply@karolev.org` now.
+`lib/email.js` swapped from nodemailer/Gmail SMTP to the Resend SDK,
+`RESEND_API_KEY` set in Vercel prod, `GMAIL_USER`/`GMAIL_APP_PASSWORD`
+removed. Live-verified: real send came back `"last_event": "delivered"`
+via Resend's own API (not just our 200 response, actual delivery
+confirmed this time — the first Resend attempt looked fine at our layer
+too before failing with "Domain is not verified").
 
 ## Security audit (/cso, comprehensive) — 2026-08-07
 
