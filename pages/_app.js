@@ -1,19 +1,16 @@
 import { SessionProvider } from 'next-auth/react';
 import { BodyCompositionProvider } from '../contexts/bodycomposition.context';
-import { NotificationsProvider } from '@/contexts/notifications.context';
 import Layout, { layout } from '../components/layout';
 import '@/styles/globals.css'
 
 export default function App({ Component, pageProps: { session, ...pageProps } }) {
   return (
     <SessionProvider session={session}>
-      <NotificationsProvider>
-        <BodyCompositionProvider>
-          <Layout>
-            <Component {...pageProps} />
-          </Layout>
-        </BodyCompositionProvider>
-      </NotificationsProvider>
+      <BodyCompositionProvider>
+        <Layout>
+          <Component {...pageProps} />
+        </Layout>
+      </BodyCompositionProvider>
     </SessionProvider>
   )
 }
