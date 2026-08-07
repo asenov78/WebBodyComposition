@@ -46,16 +46,14 @@ fix` (18→4 known vulns), cron secret now constant-time compared +
 header-only (dropped the query-param fallback). Everything else is a
 **finding, not yet fixed** — tracked here for follow-up.
 
-- 🔴 **No rate limiting on `/api/auth/callback/credentials` (login),
-  `/api/register`, `/api/auth/forgot-password`.** Real risk on a
-  multi-user auth system: credential-stuffing/brute-force against login,
-  unlimited registration spam, and forgot-password can be used to
-  email-bomb any address repeatedly. Not a quick fix — Vercel functions
-  are stateless per-invocation, so naive in-memory counters don't work
-  across requests; needs a durable store (Upstash Redis via Vercel
-  Marketplace is the standard fit) or at minimum a DB-backed
-  attempt-counter table. Needs a real implementation pass, not patched
-  in this audit.
+- ✅ **Rate limiting — DONE, 2026-08-07.** DB-backed (`RateLimitAttempt`
+  model, `lib/rateLimit.js`) rather than Upstash/Redis — no new infra
+  needed at this app's traffic level. Login: 5/15min per email + 15/15min
+  per IP, checked before the bcrypt compare. Register: 10/hour per IP.
+  Forgot-password: 3/hour per email + 10/hour per IP, checked before the
+  user-existence lookup so the rate limit itself isn't a new enumeration
+  channel. Self-cleaning (~1% of calls prune rows >24h old), no dedicated
+  cron entry. 24 new tests.
 - 🟡 **`nodemailer@7.0.13` has known CVEs** (SMTP command injection via
   unsanitized fields, TLS cert validation issue in OAuth2 token fetch,
   `disableFileAccess`/`disableUrlAccess` bypasses) with fixes only in
