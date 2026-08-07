@@ -23,7 +23,11 @@ export default function Layout({ children }) {
                     key="desc"
                 />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
-                <link rel="icon" href="/favicon.ico" />
+                {/* SVG favicon (our own mark, public/logo.svg) first — modern browsers
+                    prefer it; favicon.ico kept as a fallback for the ones that don't
+                    support SVG favicons yet. */}
+                <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+                <link rel="icon" href="/favicon.ico" sizes="any" />
             </Head>
             <div className='app-shell'>
                 {showNavbar && <Navbar />}

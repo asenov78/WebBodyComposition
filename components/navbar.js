@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react"
 import Link from 'next/link'
-import Image from 'next/image'
 import { useSession, signOut } from 'next-auth/react'
-import scaleIcon from '../public/weighing-scale-64.png'
 
 export default function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -36,14 +34,16 @@ export default function Navbar() {
         <nav className="navbar is-primary" role="navigation" aria-label="main navigation">
             <div className="navbar-brand">
                 <Link href="/" passHref onClick={closeMenu} className="navbar-item">
-                    <figure className="image is-32x32">
-                        <Image
-                            src={scaleIcon}
-                            alt="scale logo"
-                            width={32}
-                            height={32}
-                        />
-                    </figure>
+                    {/* Our own mark (not the stock scale icon this fork started with —
+                        see TODO.md). Drawn inline rather than public/logo.svg here
+                        specifically: on the is-primary bar itself, a translucent white
+                        fill reads as part of the bar instead of a boxed sticker sitting
+                        on top of it; the solid-teal version (public/logo.svg) is for
+                        contexts with a non-teal background, e.g. the favicon. */}
+                    <svg width="28" height="28" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <rect x="2" y="2" width="60" height="60" rx="14" fill="#ffffff" fillOpacity="0.16" />
+                        <text x="32" y="44.5" textAnchor="middle" fontFamily="-apple-system, 'Segoe UI', Roboto, Arial, sans-serif" fontWeight="800" fontSize="33" fill="#ffffff">W</text>
+                    </svg>
                     <span className="ml-2 has-text-weight-semibold">Web Body Composition</span>
                 </Link>
 
