@@ -2,6 +2,15 @@ import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../../../lib/prisma';
+import { checkRateLimit, getClientIp } from '../../../lib/rateLimit';
+
+// Per-email: stops one account being brute-forced regardless of source IP.
+// Per-IP: stops one source spraying many accounts. Checked before the (expensive)
+// bcrypt compare so a rate-limited attempt doesn't even pay that cost.
+const LOGIN_EMAIL_MAX_ATTEMPTS = 5;
+const LOGIN_EMAIL_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_IP_MAX_ATTEMPTS = 15;
+const LOGIN_IP_WINDOW_MS = 15 * 60 * 1000;
 
 export const authOptions = {
     // next-auth v4 looks for NEXTAUTH_SECRET by default; we provision AUTH_SECRET
@@ -28,14 +37,23 @@ export const authOptions = {
                 email: { label: 'Email', type: 'email' },
                 password: { label: 'Password', type: 'password' },
             },
-            async authorize(credentials) {
+            async authorize(credentials, req) {
                 if (!credentials?.email || !credentials?.password) {
                     return null;
                 }
 
-                const user = await prisma.user.findUnique({
-                    where: { email: credentials.email.toLowerCase().trim() },
-                });
+                const email = credentials.email.toLowerCase().trim();
+
+                const ipCheck = await checkRateLimit(`login-ip:${getClientIp(req)}`, { maxAttempts: LOGIN_IP_MAX_ATTEMPTS, windowMs: LOGIN_IP_WINDOW_MS });
+                if (!ipCheck.allowed) {
+                    return null;
+                }
+                const emailCheck = await checkRateLimit(`login-email:${email}`, { maxAttempts: LOGIN_EMAIL_MAX_ATTEMPTS, windowMs: LOGIN_EMAIL_WINDOW_MS });
+                if (!emailCheck.allowed) {
+                    return null;
+                }
+
+                const user = await prisma.user.findUnique({ where: { email } });
                 if (!user) {
                     return null;
                 }

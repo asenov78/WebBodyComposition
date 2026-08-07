@@ -70,6 +70,20 @@ model GarminCredential {
   updatedAt     DateTime @updatedAt
 }
 
+// Backs lib/rateLimit.js. One row per attempt — `key` is something like
+// "login:john@example.com" or "login:1.2.3.4", checkRateLimit() counts rows for a
+// key newer than its window and rejects once the count hits the caller's max.
+// No separate cleanup job: checkRateLimit() itself prunes old rows on a small
+// random chance per call, so the table doesn't grow unbounded without needing
+// its own cron entry.
+model RateLimitAttempt {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+
 // Imported from Xiaomi Cloud (or entered manually) and, once synced, pushed to Garmin.
 // sourceDate is the actual weigh-in timestamp from the scale/cloud — unique per user so
 // re-importing the same Xiaomi Cloud page twice doesn't create duplicate rows.

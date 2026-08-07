@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockFindUnique = vi.fn();
 const mockCreateResetToken = vi.fn();
 const mockSendPasswordResetEmail = vi.fn();
+const mockCheckRateLimit = vi.fn();
 
 vi.mock('../../../lib/prisma', () => ({
     prisma: { user: { findUnique: (...args) => mockFindUnique(...args) } },
@@ -18,6 +19,10 @@ vi.mock('../../../lib/passwordReset', () => ({
 }));
 vi.mock('../../../lib/email', () => ({
     sendPasswordResetEmail: (...args) => mockSendPasswordResetEmail(...args),
+}));
+vi.mock('../../../lib/rateLimit', () => ({
+    checkRateLimit: (...args) => mockCheckRateLimit(...args),
+    getClientIp: () => '1.2.3.4',
 }));
 
 const { default: handler } = await import('../../../pages/api/auth/forgot-password');
@@ -41,6 +46,8 @@ beforeEach(() => {
     mockFindUnique.mockReset();
     mockCreateResetToken.mockReset();
     mockSendPasswordResetEmail.mockReset();
+    mockCheckRateLimit.mockReset();
+    mockCheckRateLimit.mockResolvedValue({ allowed: true });
 });
 
 describe('POST /api/auth/forgot-password', () => {
@@ -98,5 +105,27 @@ describe('POST /api/auth/forgot-password', () => {
 
         expect(res.statusCode).toBe(200);
         expect(res.jsonBody.message).toBe(GENERIC_MESSAGE);
+    });
+
+    it('rejects with 429 when the per-IP limit is hit, before ever looking up the user', async () => {
+        mockCheckRateLimit.mockResolvedValueOnce({ allowed: false }); // IP check fails first
+
+        const { req, res } = mockReqRes({ body: { email: 'john@example.com' } });
+        await handler(req, res);
+
+        expect(res.statusCode).toBe(429);
+        expect(mockFindUnique).not.toHaveBeenCalled();
+    });
+
+    it('rejects with 429 when the per-email limit is hit', async () => {
+        mockCheckRateLimit
+            .mockResolvedValueOnce({ allowed: true }) // IP check passes
+            .mockResolvedValueOnce({ allowed: false }); // email check fails
+
+        const { req, res } = mockReqRes({ body: { email: 'john@example.com' } });
+        await handler(req, res);
+
+        expect(res.statusCode).toBe(429);
+        expect(mockFindUnique).not.toHaveBeenCalled();
     });
 });
