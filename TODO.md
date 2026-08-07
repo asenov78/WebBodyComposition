@@ -1,5 +1,42 @@
 # TODO
 
+## Cron trigger moved off linux-bot onto the DO droplet — mostly DONE, 2026-08-07
+
+linux-bot (home laptop) was running 24/7 just to fire a curl every 5 min
+— real electricity for near-zero actual load. The `invoicealert.app` DO
+droplet (`167.71.36.3`) already runs 24/7 regardless (unrelated
+project), so adding this one cron entry there is effectively free —
+confirmed HTTPS outbound isn't blocked there (only SMTP ports are, per
+that project's own notes — irrelevant here, this is a plain HTTPS POST).
+
+Done:
+- Rotated `CRON_SECRET` (old one was a Vercel "Sensitive" var, couldn't
+  be read back to reuse) — set in Vercel prod, GitHub Actions secret,
+  and the new droplet crontab, all at once so nothing's left signing
+  with a stale value.
+- `deploy@167.71.36.3` crontab: `*/5 * * * * curl ... /api/cron/sync`,
+  logs to `~/wbc-sync.log` (not `/var/log/` — deploy user has no write
+  access there, confirmed by trying).
+- Verified live: manual trigger with the new secret processed both
+  users correctly.
+
+**Not yet done** — linux-bot is currently offline (unreachable over
+Tailscale, laptop presumably asleep/off at home):
+- Remove linux-bot's now-redundant crontab entry. Harmless to leave
+  running in the meantime — the sync logic is idempotent (dedup on
+  import, no-op if nothing pending), so two triggers firing every 5 min
+  just means occasional double-checking, not double-syncing.
+- Check/stop the orphaned `yagcc-patched` Docker container (from the
+  self-hosted Garmin proxy attempt, reverted same day — see the Garmin
+  section below) — it was set `--restart unless-stopped`, so it's
+  likely still running and consuming resources for something no longer
+  in use (`GARMIN_PROXY_URL` was removed from Vercel).
+- Also consider disabling the Tailscale Funnel exposure
+  (`https://linux-bot.tail8b795f.ts.net`) if the container's stopped —
+  no reason to keep it publicly reachable for nothing.
+
+Retry next time linux-bot shows online in `tailscale status`.
+
 ## Architecture review (manual, same depth as /cso) — DONE, 2026-08-07
 
 Executed one step at a time (build+test+commit+push+deploy per step):

@@ -50,17 +50,20 @@ pending ones to Garmin. It's authenticated via a shared secret
 
 **It's not triggered by Vercel's own Cron Jobs.** Vercel's Hobby plan caps Cron Jobs
 at once per day — too coarse for "keep going in the background." Primary trigger is
-a `crontab` entry on `linux-bot` (an always-on home machine) calling the endpoint
-every 5 minutes — GitHub Actions' `schedule` trigger was tried first but proved
-unreliable in practice (observed gaps of 1-3+ hours despite a 10-minute config, a
-known GitHub Actions limitation under load, not specific to this repo).
-[`.github/workflows/sync-cron.yml`](.github/workflows/sync-cron.yml) is kept as a
-secondary fallback (in case linux-bot itself is down) and still has a
-`workflow_dispatch` trigger for running it on demand from the Actions tab
-(`gh workflow run "Auto-sync Xiaomi -> Garmin"`).
+a `crontab` entry on a DigitalOcean droplet (`deploy@167.71.36.3`, shared with an
+unrelated project that already runs it 24/7 — adding one more `curl` every 5 minutes
+is effectively free) calling the endpoint every 5 minutes. This ran on a home
+laptop (`linux-bot`) at first — moved off it 2026-08-07 purely to stop a physical
+machine idling 24/7 just for a periodic curl; GitHub Actions' `schedule` trigger was
+tried before that and proved unreliable in practice (observed gaps of 1-3+ hours
+despite a 10-minute config, a known GitHub Actions limitation under load, not
+specific to this repo). [`.github/workflows/sync-cron.yml`](.github/workflows/sync-cron.yml)
+is kept as a secondary fallback and still has a `workflow_dispatch` trigger for
+running it on demand from the Actions tab (`gh workflow run "Auto-sync Xiaomi ->
+Garmin"`).
 
-This means sync keeps running as long as linux-bot (or, as fallback, GitHub Actions)
-and Vercel are up — independent of your browser, your computer being on, or being
+This means sync keeps running as long as the droplet (or, as fallback, GitHub
+Actions) and Vercel are up — independent of your browser, your computer being on, or being
 logged into the app.
 
 ### Why syncing happens in small batches, not all at once
