@@ -1,33 +1,33 @@
 # TODO
 
-## Architecture review (manual, same depth as /cso) — 2026-08-07
+## Architecture review (manual, same depth as /cso) — DONE, 2026-08-07
 
-Plan, executing one step at a time (build+test+commit+push+deploy per
-step, docs/memory updated alongside):
+Executed one step at a time (build+test+commit+push+deploy per step):
 
-1. Delete dead scanner subtree — `components/scanner.js`,
-   `services/scanner.js`, `services/metrics.js`. Confirmed zero live
-   importers.
-2. Remove `NotificationsProvider`/`contexts/notifications.context.js` —
-   confirmed zero live consumers of `useNotificationsContext` (only
-   `components/scanner.js`, itself dead).
-3. Simplify `pages/sync/garmin.js` off `BodyCompositionProvider` — the
-   context only ever held its static default (`{value: 42}`, and
-   `garmin.js` reads shape-mismatched fields like `.weight` off it
-   anyway, always falling back to `?? 0`) since nothing but the
-   also-dead scanner.js ever wrote to it. Plain `useState(0)` per field
-   is equivalent behavior. Then remove the Provider + context file.
-4. Extract `parseWeightRecords()` into `lib/` — duplicated near-
-   identically in `pages/cloud/xiaomiCloud.js` and `lib/xiaomiSync.js`
-   (the latter's own comment already says "same parsing logic as...").
-5. Update README architecture section + create a persistent memory file
-   for this project (there wasn't one despite it being this session's
-   biggest body of work).
+1. ✅ Deleted dead scanner subtree — `components/scanner.js`,
+   `services/scanner.js`, `services/metrics.js`. Zero live importers.
+2. ✅ Removed `NotificationsProvider`/`contexts/notifications.context.js`
+   — zero live consumers of `useNotificationsContext`.
+3. ✅ Simplified `pages/sync/garmin.js` off `BodyCompositionProvider` —
+   the context only ever held its static default (nothing but the
+   also-deleted scanner.js wrote to it); plain `useState(0)` per field
+   is equivalent behavior. Provider + context file removed.
+4. ✅ Extracted `parseWeightRecords()` into `lib/xiaomiWeightParsing.js`
+   — was duplicated near-identically in `pages/cloud/xiaomiCloud.js`
+   and `lib/xiaomiSync.js`. 7 new tests.
+5. ✅ README architecture section brought current (fixed a stale claim
+   that deleted scanner files "are still in the repo", added password
+   reset/Bulma/domain/proxy-timeout notes). Persistent memory file
+   (`project_webbodycomposition.md`) updated — was 2 days stale,
+   missing everything from Bulma migration onward.
 6. **Documented, not actioned**: `prisma/` has no `migrations/` — every
    deploy is `prisma db push` (no rollback/history). Fine at current
    scale; switching to `prisma migrate` now would be churn without a
    concrete need. Revisit if the schema needs a genuinely destructive
    change or a second contributor joins.
+
+Final tally: 54/54 tests pass (was 47 at the start of this pass), build
+clean, 4 commits (one per step), all deployed to prod.
 
 ## Recommended: switch password-reset email to Resend + verified subdomain
 
