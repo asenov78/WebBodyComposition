@@ -18,6 +18,11 @@ export default withAuth({
 
 export const config = {
     matcher: [
-        '/((?!api/auth|api/register|api/cron|login|register|forgot-password|reset-password|_next/static|_next/image|favicon.ico).*)',
+        // Static-extension exclusion (added after logo.svg got caught by the gate and
+        // bounced to /login for anyone not already signed in — favicon.ico was excluded
+        // by name before, but that only covered the one file, not public/ assets in
+        // general) is a pattern, not a per-file list, so future public/ files added
+        // later don't hit the same bug again.
+        '/((?!api/auth|api/register|api/cron|login|register|forgot-password|reset-password|_next/static|_next/image|.*\\.(?:svg|png|jpe?g|gif|ico|webmanifest|xml|txt|woff2?)$).*)',
     ],
 };
