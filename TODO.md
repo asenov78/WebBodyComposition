@@ -1,5 +1,51 @@
 # TODO
 
+## Security audit (/cso, comprehensive) — 2026-08-07
+
+Full findings below. Fixed same session: axios 1.4.0→1.19.0 + `npm audit
+fix` (18→4 known vulns), cron secret now constant-time compared +
+header-only (dropped the query-param fallback). Everything else is a
+**finding, not yet fixed** — tracked here for follow-up.
+
+- 🔴 **No rate limiting on `/api/auth/callback/credentials` (login),
+  `/api/register`, `/api/auth/forgot-password`.** Real risk on a
+  multi-user auth system: credential-stuffing/brute-force against login,
+  unlimited registration spam, and forgot-password can be used to
+  email-bomb any address repeatedly. Not a quick fix — Vercel functions
+  are stateless per-invocation, so naive in-memory counters don't work
+  across requests; needs a durable store (Upstash Redis via Vercel
+  Marketplace is the standard fit) or at minimum a DB-backed
+  attempt-counter table. Needs a real implementation pass, not patched
+  in this audit.
+- 🟡 **`nodemailer@7.0.13` has known CVEs** (SMTP command injection via
+  unsanitized fields, TLS cert validation issue in OAuth2 token fetch,
+  `disableFileAccess`/`disableUrlAccess` bypasses) with fixes only in
+  the 8.x/9.x line — a breaking major-version jump from our current 7.x,
+  used by `lib/email.js`. Not fixed here: needs testing against our
+  actual Gmail-SMTP usage before adopting (`nodemailer.createTransport`
+  API has had breaking changes across majors).
+- 🟡 **`next@14.2.35` has known CVEs**, several App-Router/Server-Actions/
+  RSC-specific (this app is Pages Router only, no App Router, no Server
+  Actions — those specific CVEs likely don't apply to our actual usage,
+  though the package itself still flags). Fix requires Next 14→16, a
+  planned upgrade with its own testing pass, not done here.
+- 🟢 **`pages/register.js` leaks account existence** via `409 "An
+  account with this email already exists"` — standard email-enumeration
+  tradeoff most apps accept for better UX (clear "already registered"
+  message vs a vaguer one); flagging for awareness, not proposing a
+  change unless rate limiting (above) lands first, since enumeration is
+  far more dangerous when it can be automated at scale.
+- Checked and clean: no `.env` ever committed (`git log --all -- .env`
+  empty), `.gitignore` correctly covers `.env*` with the `.env.example`
+  exception; every data-access API route (`measurements`, `xiaomi/
+  credentials`, `sync/garmin*`) derives `userId` from the **server-side
+  session**, never from client-supplied input — no IDOR found; no raw
+  SQL (`$queryRaw`/`$executeRaw`), no `dangerouslySetInnerHTML`, no
+  `eval`/`exec`/`child_process`; `lib/encryption.js` (AES-256-GCM,
+  random IV per call, auth tag verified) is sound; password reset
+  tokens are hashed at rest, single-use, 1-hour expiry; GitHub Actions
+  workflow secrets come from `secrets.*` context, never hardcoded.
+
 ## Design our own logo
 
 Current logo (`public/weighing-scale-64.png`, shown in the navbar) is a
