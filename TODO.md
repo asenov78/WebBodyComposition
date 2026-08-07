@@ -1,5 +1,44 @@
 # TODO
 
+## Architecture review (manual, same depth as /cso) — 2026-08-07
+
+Plan, executing one step at a time (build+test+commit+push+deploy per
+step, docs/memory updated alongside):
+
+1. Delete dead scanner subtree — `components/scanner.js`,
+   `services/scanner.js`, `services/metrics.js`. Confirmed zero live
+   importers.
+2. Remove `NotificationsProvider`/`contexts/notifications.context.js` —
+   confirmed zero live consumers of `useNotificationsContext` (only
+   `components/scanner.js`, itself dead).
+3. Simplify `pages/sync/garmin.js` off `BodyCompositionProvider` — the
+   context only ever held its static default (`{value: 42}`, and
+   `garmin.js` reads shape-mismatched fields like `.weight` off it
+   anyway, always falling back to `?? 0`) since nothing but the
+   also-dead scanner.js ever wrote to it. Plain `useState(0)` per field
+   is equivalent behavior. Then remove the Provider + context file.
+4. Extract `parseWeightRecords()` into `lib/` — duplicated near-
+   identically in `pages/cloud/xiaomiCloud.js` and `lib/xiaomiSync.js`
+   (the latter's own comment already says "same parsing logic as...").
+5. Update README architecture section + create a persistent memory file
+   for this project (there wasn't one despite it being this session's
+   biggest body of work).
+6. **Documented, not actioned**: `prisma/` has no `migrations/` — every
+   deploy is `prisma db push` (no rollback/history). Fine at current
+   scale; switching to `prisma migrate` now would be churn without a
+   concrete need. Revisit if the schema needs a genuinely destructive
+   change or a second contributor joins.
+
+## Recommended: switch password-reset email to Resend + verified subdomain
+
+Now that `karolev.org` is owned (Cloudflare), Resend can be set up
+properly (e.g. `mail.karolev.org`, DNS records via the Cloudflare API
+access already used for `scale.karolev.org`) instead of Gmail SMTP.
+Better fit long-term: dedicated deliverability tracking, no personal-
+Gmail-account sending caps/ToS exposure for automated app mail. Not
+started — Gmail SMTP works fine currently, this is an improvement, not
+a fix.
+
 ## Security audit (/cso, comprehensive) — 2026-08-07
 
 Full findings below. Fixed same session: axios 1.4.0→1.19.0 + `npm audit
