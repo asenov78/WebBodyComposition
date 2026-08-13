@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import useLocalStorageState from 'use-local-storage-state';
 import { parseWeightRecords } from '../../lib/xiaomiWeightParsing';
+import { normalizeLoginChallenge, pollForPassToken, readJsonResponse } from '../../lib/xiaomiLogin';
 
 const regionOptions = [
     { value: 'cn', label: 'China' },
@@ -103,29 +104,6 @@ export default function XiaomiCloud() {
         setShowConnectionDetails(false);
     };
 
-    const sleep = (delayMs, signal) => new Promise((resolve, reject) => {
-        if (signal?.aborted) {
-            const abortError = new Error('Login polling cancelled.');
-            abortError.name = 'AbortError';
-            reject(abortError);
-            return;
-        }
-
-        const timeoutId = setTimeout(() => {
-            signal?.removeEventListener('abort', handleAbort);
-            resolve();
-        }, delayMs);
-
-        const handleAbort = () => {
-            clearTimeout(timeoutId);
-            const abortError = new Error('Login polling cancelled.');
-            abortError.name = 'AbortError';
-            reject(abortError);
-        };
-
-        signal?.addEventListener('abort', handleAbort, { once: true });
-    });
-
     const clearLoginChallenge = () => {
         setLoginSessionId('');
         setLoginUrl('');
@@ -135,20 +113,6 @@ export default function XiaomiCloud() {
 
     const cancelPassTokenPolling = () => {
         loginPollingControllerRef.current?.abort();
-    };
-
-    const readJsonResponse = async (response) => {
-        const responseText = await response.text();
-
-        if (!responseText) {
-            return {};
-        }
-
-        try {
-            return JSON.parse(responseText);
-        } catch {
-            return responseText;
-        }
     };
 
     const submitMeasurements = async (event) => {
@@ -211,49 +175,6 @@ export default function XiaomiCloud() {
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const normalizeLoginChallenge = (loginResponse) => ({
-        sessionId: loginResponse?.sessionid ?? loginResponse?.sessionId ?? '',
-        loginUrl: loginResponse?.loginUrl ?? '',
-        qrCodeBase64: loginResponse?.qrCodeBase64 ?? loginResponse?.qrCode ?? '',
-        pollingEndpoint: loginResponse?.pollingEndpoint ?? '',
-    });
-
-    const pollForPassToken = async (endpoint, signal) => {
-        for (let attempt = 1; attempt <= 10; attempt += 1) {
-            if (signal?.aborted) {
-                const abortError = new Error('Login polling cancelled.');
-                abortError.name = 'AbortError';
-                throw abortError;
-            }
-
-            const response = await fetch(endpoint, {
-                method: 'GET',
-                headers: {
-                    Accept: 'application/json',
-                },
-                signal,
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || `Polling failed with status ${response.status}`);
-            }
-
-            const pollResponse = await readJsonResponse(response);
-            const pollStatus = pollResponse?.status ?? '';
-
-            if (pollStatus && pollStatus !== 'pending') {
-                return pollResponse;
-            }
-
-            if (attempt < 10) {
-                await sleep(2000, signal);
-            }
-        }
-
-        throw new Error('Timed out waiting for Xiaomi login to complete.');
     };
 
     const getPassToken = async () => {
