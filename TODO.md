@@ -20,22 +20,14 @@ Done:
 - Verified live: manual trigger with the new secret processed both
   users correctly.
 
-**Not yet done** — linux-bot is currently offline (unreachable over
-Tailscale, laptop presumably asleep/off at home):
-- Remove linux-bot's now-redundant crontab entry. Harmless to leave
-  running in the meantime — the sync logic is idempotent (dedup on
-  import, no-op if nothing pending), so two triggers firing every 5 min
-  just means occasional double-checking, not double-syncing.
-- Check/stop the orphaned `yagcc-patched` Docker container (from the
-  self-hosted Garmin proxy attempt, reverted same day — see the Garmin
-  section below) — it was set `--restart unless-stopped`, so it's
-  likely still running and consuming resources for something no longer
-  in use (`GARMIN_PROXY_URL` was removed from Vercel).
-- Also consider disabling the Tailscale Funnel exposure
-  (`https://linux-bot.tail8b795f.ts.net`) if the container's stopped —
-  no reason to keep it publicly reachable for nothing.
-
-Retry next time linux-bot shows online in `tailscale status`.
+**linux-bot cleanup — DONE, 2026-08-08**: old crontab entry removed
+(`crontab -l` → empty), orphaned `yagcc-patched` Docker container
+stopped+removed (`docker ps -a` → empty), Tailscale Funnel disabled
+(`tailscale funnel status` → "No serve config"). linux-bot is now
+repurposed as a home DNS ad-blocker (AdGuard Home) — see
+`project_webbodycomposition.md`'s memory file is NOT where that lives;
+it's unrelated to this app, tracked in linux-bot's own memory note
+instead.
 
 ## Architecture review (manual, same depth as /cso) — DONE, 2026-08-07
 
