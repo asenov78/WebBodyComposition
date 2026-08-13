@@ -1,5 +1,35 @@
 # TODO
 
+## /cso + /engineering:code-review + manual architecture review — DONE, 2026-08-11
+
+- `/cso` daily-mode recheck: no new findings since the 2026-08-07 comprehensive
+  audit (nothing in the app code changed in between — only linux-bot infra work,
+  unrelated repo). nodemailer/postcss CVEs still transitive-only, unchanged.
+- `/engineering:code-review`, full-codebase pass (no diff existed to review, so
+  scoped to lib/ + pages/api/): 2 real concurrency findings, both fixed —
+  - `lib/measurementImport.js`: check-then-create race on the `(userId,
+    sourceDate)` unique constraint — two overlapping imports (cron + manual
+    click, or overlapping cron triggers) could both pass the pre-check, then
+    race on `create()`. The uncaught P2002 propagated through
+    `fetchAndImportXiaomiWeights` into the cron handler's per-user loop with no
+    try/catch, killing the *entire* cron run for every user after the one that
+    raced. Now caught and counted as a duplicate.
+  - `lib/garminSync.js`: `syncPendingMeasurementsBatch` had no claim/lock on a
+    pending row before pushing to Garmin — two concurrent callers (cron + a
+    manual "Sync Now" click) could push the same measurement twice, landing a
+    duplicate weigh-in in Garmin Connect that can't be undone from this app.
+    Fixed with an atomic claim (`updateMany` guarded by `syncedToGarmin:
+    false`) before the push; released if the push fails or needs MFA.
+  - 5 new regression tests.
+- Manual architecture review (`/improve-codebase-architecture` doesn't exist
+  as a skill): `pages/cloud/xiaomiCloud.js` was 690 lines, ~3x the next-largest
+  file, mixing QR-login polling + credential persistence + UI rendering. The
+  polling state machine (retry/timeout/abort logic, zero test coverage) was
+  extracted into `lib/xiaomiLogin.js` — same reasoning as the earlier
+  `parseWeightRecords` extraction. 690 → 611 lines, 12 new tests.
+- Final: 95/95 tests passing (was 78 at the start of this pass), build clean,
+  2 commits, both deployed to prod.
+
 ## Cron trigger moved off linux-bot onto the DO droplet — mostly DONE, 2026-08-07
 
 linux-bot (home laptop) was running 24/7 just to fire a curl every 5 min
