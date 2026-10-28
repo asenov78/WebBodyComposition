@@ -84,7 +84,7 @@ export default function Home() {
         {series.loading ? (
           <p className='has-text-grey is-size-7'>Loading…</p>
         ) : (
-          <WeightChart series={series.items} />
+          <WeightChart series={series.items} showRangeSelector />
         )}
       </div>
 

@@ -36,7 +36,7 @@ assigned `web-body-composition-three.vercel.app` still works too)
      [Automation](#automation) below. No browser needs to be open.
    - **On demand**, via the "Sync Now" button on `/sync/garmin-bulk` (useful right
      after connecting, or if you don't want to wait for the next scheduled run).
-5. **Dashboard** (`/`) — current weight, a trend chart, connection status, and recent
+5. **Dashboard** (`/`) — current weight, a trend chart (1W / 1M / 2M / 3M / 6M / 1Y / 2Y / 3Y / All picker, the choice is remembered per browser), connection status, and recent
    sync history. Polls every 15s so it reflects background progress without a manual
    refresh.
 
