@@ -6,5 +6,8 @@
     "pages/api/cron/sync.js": {
       "maxDuration": 30
     }
-  }
+  },
+  "regions": [
+    "fra1"
+  ]
 }

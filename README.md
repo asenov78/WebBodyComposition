@@ -86,10 +86,12 @@ picks up where it left off.
   `control`/`input`, `notification`, `level`, `delete`, etc. — not ad-hoc CSS; see
   TODO.md for the design-audit pass). Dark mode is automatic
   (`prefers-color-scheme`) with a manual override toggle in the navbar.
-- **Prisma 5 + Postgres** (Neon, via the Vercel-managed integration). Schema:
-  `User`, `GarminCredential`, `XiaomiCredential`, `Measurement`,
-  `PasswordResetToken`. `prisma db push` only (no `migrations/` — fine at this
-  scale, see TODO.md).
+- **Prisma 5 + Postgres** on the DigitalOcean droplet (`167.71.36.3`, database
+  `wbc`, role `wbc`, reached through pgbouncer on port 6432). Moved off Neon
+  2026-10-28 — see TODO.md for why. Schema: `User`, `GarminCredential`,
+  `XiaomiCredential`, `Measurement`, `PasswordResetToken`, `RateLimitAttempt`.
+  No `migrations/` directory; schema changes are applied by hand, see
+  [Schema changes](#schema-changes).
 - **Auth**: register/login (bcrypt-hashed passwords) plus a forgot-password email-
   link flow (`pages/api/auth/{forgot,reset}-password.js`, `lib/passwordReset.js` —
   tokens are SHA-256-hashed at rest, single-use, 1-hour expiry). Password-reset
@@ -152,7 +154,7 @@ npm test
 logic where the real bugs during development actually lived (timestamp unit
 mismatch, import dedup counting, error-message extraction). Most API routes are
 thin wrappers around tested `lib/` functions plus `getServerSession`/Prisma calls,
-verified manually against the real (Neon) database during development — except the
+verified manually against the real database during development — except the
 password-reset routes (`__tests__/api/auth/`), which do have dedicated mocked
 tests. Those live outside `pages/` on purpose: Next.js's Pages Router treats every
 file under `pages/api/` as a deployable route regardless of test intent, so a
@@ -167,11 +169,47 @@ git push origin main
 vercel --prod --yes
 ```
 
-Neon Postgres is provisioned via the Vercel Marketplace integration
-(`vercel integration add neon`), which populates `POSTGRES_PRISMA_URL` /
-`POSTGRES_URL_NON_POOLING` automatically. Env vars are per-environment
-(`vercel env add <NAME> production|preview|development` — one call per environment,
-the CLI doesn't accept all three in a single invocation).
+`POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING` are plain (sensitive) env vars
+now, not managed by an integration — both hold the same pgbouncer URL:
+`postgresql://wbc:<pw>@167.71.36.3:6432/wbc?pgbouncer=true&sslmode=require&sslaccept=accept_invalid_certs&connection_limit=2`.
+Env vars are per-environment (`vercel env add <NAME> production|preview|development` —
+one call per environment, the CLI doesn't accept all three in a single invocation).
+`vercel.json` pins functions to `fra1` because the droplet is in Frankfurt; the default
+region (Washington) would cross the Atlantic on every query.
+
+`sslaccept=accept_invalid_certs` is a deliberate compromise: the pgbouncer certificate is
+self-signed with CN = the machine's hostname, so Prisma's strict check fails when
+connecting by IP, and pinning via `sslcert=` was tried and found to be *not enforced*
+with `sslmode=require` (a wrong CA connected fine). The channel is encrypted but the
+server is not authenticated, so an attacker positioned between Vercel and the droplet
+could read it. The proper fix is a real hostname (e.g. `db.karolev.org`) with a
+Let's Encrypt certificate on a pgbouncer listener of its own — the existing certificate
+is pinned by the UltraPacer site and must not be replaced.
+
+### Schema changes
+
+There is no `prisma migrate`; `prisma db push` can't go through pgbouncer's transaction
+pooling. Two ways to apply a change:
+
+1. **SSH tunnel + db push** — `ssh -i ~/.ssh/id_ed25519 -L 15432:127.0.0.1:5432
+   deploy@167.71.36.3`, then with `POSTGRES_URL_NON_POOLING=postgresql://wbc:<pw>@localhost:15432/wbc`
+   (direct Postgres, no pgbouncer) run `prisma db push`. Run it as the `wbc` role, never
+   `postgres`, or the new tables end up owned by `postgres` and the app gets
+   `permission denied` (this took UltraPacer's login down once).
+2. **Generated SQL** — `node node_modules/prisma/build/index.js migrate diff --from-empty
+   --to-schema-datamodel prisma/schema.prisma --script`, copy to the droplet, and run
+   `PGPASSWORD=… psql -h 127.0.0.1 -U wbc -d wbc -f file.sql`.
+
+After either: `select tablename, tableowner from pg_tables where schemaname='public'` —
+every owner must be `wbc`.
+
+### Backups
+
+`wbc-backup.timer` on the droplet runs `/usr/local/bin/wbc-backup` nightly at ~04:10 UTC:
+`pg_dump -Fc`, verified with `pg_restore --list`, kept 14 days in `/var/backups/wbc`,
+copied to `apsbg@samba.superhosting.bg:~/backups/wbc/` (port 1022, the same key as the
+UltraPacer backup). A failed offsite copy fails the unit (`systemctl --failed`). Restore:
+`pg_restore -d wbc --clean --if-exists <file>` as the `postgres` system user.
 
 ---
 

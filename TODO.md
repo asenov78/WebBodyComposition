@@ -1,5 +1,40 @@
 # TODO
 
+## Neon quota outage → database moved to the droplet — 2026-10-28
+
+**Symptom:** no new weigh-ins reached the app or Garmin since ~2026-10-18. Every API call
+failed with `Can't reach database server` (Vercel logs) / `Your account or project has
+exceeded the quota` (direct query), and the droplet cron kept getting 500s every 5 min.
+
+**Cause (partly inferred):** Neon's free tier. The exact quota type is only visible in the
+Neon console and was not checked; the likely driver is that a cron hitting the DB every 5
+min (plus the GitHub fallback every 10) keeps the compute from ever suspending. UltraPacer
+had already left Neon on 2026-09-12 for the transfer quota, so the account is known to be
+tight.
+
+**Fix:** new database `wbc` (role `wbc`) on the droplet's Postgres 17, behind the existing
+pgbouncer on 6432 (added to `pgbouncer.ini` + `userlist.txt`; backups of both as
+`*.bak-wbc`). Schema applied from `prisma migrate diff` SQL, all tables owned by `wbc`.
+Neon resource `neon-erin-ferry` was *disconnected* from the Vercel project (not deleted —
+it still holds the old data once the quota resets), `POSTGRES_PRISMA_URL` /
+`POSTGRES_URL_NON_POOLING` set by hand, `vercel.json` pinned to `fra1`. Nightly backup
+added (README → Backups). Verified end to end: register on prod → row in the new DB →
+removed.
+
+**What was lost:** Neon was unreachable, so nothing could be exported — the new database
+started empty. Accounts, Garmin/Xiaomi connections must be recreated. Measurements come
+back from Xiaomi Cloud. **Garmin duplicate guard:** a fresh `Measurement` table has
+`syncedToGarmin=false` for everything, so before connecting Garmin, mark every row older
+than the outage (sourceDate < 2026-10-17) as synced, or ~290 weigh-ins re-upload.
+
+**Open:**
+- Re-register both accounts, reconnect Xiaomi (QR) and Garmin, then the cutoff above.
+- TLS to the DB is encrypted but unauthenticated (README → Deploying explains why).
+- The old Neon data: once the quota resets, `neon-erin-ferry` could be dumped for the
+  `User` / credential rows if wanted; otherwise delete the resource.
+- Cron frequency is unchanged (every 5 min). That is fine on the droplet DB; revisit only
+  if the droplet's 961 MB of RAM becomes a problem.
+
 ## /cso + /engineering:code-review + manual architecture review — DONE, 2026-08-11
 
 - `/cso` daily-mode recheck: no new findings since the 2026-08-07 comprehensive
