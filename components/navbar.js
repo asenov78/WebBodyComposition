@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
+import { clearXiaomiLocalState } from '../lib/xiaomiConnection'
 
 export default function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -87,7 +88,7 @@ export default function Navbar() {
                             {status === 'authenticated' && (
                                 <>
                                     <span className="navbar-item px-0 has-text-white-ter is-size-7">{session.user?.email}</span>
-                                    <a href="#" onClick={(e) => { e.preventDefault(); closeMenu(); signOut(); }}
+                                    <a href="#" onClick={(e) => { e.preventDefault(); closeMenu(); clearXiaomiLocalState(); signOut(); }}
                                         className="button is-light is-small">
                                         Log Out
                                     </a>

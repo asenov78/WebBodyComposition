@@ -3,6 +3,7 @@ import Link from 'next/link';
 import useLocalStorageState from 'use-local-storage-state';
 import { parseWeightRecords } from '../../lib/xiaomiWeightParsing';
 import { normalizeLoginChallenge, pollForPassToken, readJsonResponse } from '../../lib/xiaomiLogin';
+import { connectionFromServer } from '../../lib/xiaomiConnection';
 
 const regionOptions = [
     { value: 'cn', label: 'China' },
@@ -70,15 +71,19 @@ export default function XiaomiCloud() {
         fetch('/api/xiaomi/credentials')
             .then((r) => r.json())
             .then((data) => {
-                if (data.connected) {
-                    setUserId(String(data.xiaomiUserId));
-                    setPassToken(data.passToken);
-                    if (data.region) setRegion(data.region);
-                    if (data.model) setModel(data.model);
-                    setIsSavedServerSide(true);
-                }
+                // Server decides: no saved connection means empty fields, not whatever a
+                // previous account left in this browser's localStorage.
+                const connection = connectionFromServer(data);
+                setUserId(connection.userId);
+                setPassToken(connection.passToken);
+                if (connection.region) setRegion(connection.region);
+                if (connection.model) setModel(connection.model);
+                setIsSavedServerSide(connection.saved);
             })
-            .catch(() => { })
+            .catch(() => {
+                setUserId('');
+                setPassToken('');
+            })
             .finally(() => setIsLoadingConnection(false));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
