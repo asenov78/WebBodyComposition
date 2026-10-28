@@ -3,9 +3,12 @@ import { authOptions } from '../../auth/[...nextauth]';
 import { prisma } from '../../../../lib/prisma';
 import { syncPendingMeasurementsBatch } from '../../../../lib/garminSync';
 
-// This route has vercel.json maxDuration=30 (see there). 25s time budget leaves a 5s
-// margin under that hard cutoff.
+// This route has vercel.json maxDuration=60 (see there). The proxy's fresh Garmin login
+// now takes ~26-30s, so one call may run up to 55s; no new push starts after 25s, and
+// no call is allowed to run past 57s, leaving a 3s margin under the hard cutoff.
 const MAX_TIME_BUDGET_MS = 25000;
+const PER_CALL_TIMEOUT_MS = 55000;
+const HARD_DEADLINE_MS = 57000;
 
 // Pushes up to `limit` not-yet-synced Measurement rows for this user to Garmin. Kept as
 // a manual/interactive fallback — the background cron (pages/api/cron/sync.js) now does
@@ -38,7 +41,10 @@ export default async function handler(req, res) {
     const batchSize = Number.isFinite(Number(limit)) && Number(limit) > 0 ? Math.floor(Number(limit)) : 5;
 
     const result = await syncPendingMeasurementsBatch({
-        userId, limit: batchSize, email, password, mfaCode, clientId, timeBudgetMs: MAX_TIME_BUDGET_MS,
+        userId, limit: batchSize, email, password, mfaCode, clientId,
+        timeBudgetMs: MAX_TIME_BUDGET_MS,
+        perCallTimeoutMs: PER_CALL_TIMEOUT_MS,
+        hardDeadlineMs: HARD_DEADLINE_MS,
     });
 
     return res.status(200).json(result);
